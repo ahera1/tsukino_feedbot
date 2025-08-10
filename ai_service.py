@@ -19,7 +19,7 @@ class AIService:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/yourusername/tsukino_feedbot",
+                "HTTP-Referer": "https://github.com/ahera1/tsukino_feedbot",
                 "X-Title": "Tsukino Feedbot"
             }
             
