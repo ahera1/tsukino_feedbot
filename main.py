@@ -197,7 +197,7 @@ class FeedBot:
                 )
                 
                 # Mastodonに投稿
-                if self.mastodon_service.post_toot(post_content):
+                if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
                     article.posted_to_mastodon = True
                     print(f"投稿完了: {article.title}")
                 else:

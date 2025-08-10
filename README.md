@@ -17,6 +17,7 @@ copy config.example.py config.py
 - `OPENROUTER_API_KEY`: OpenRouter APIキー
 - `MASTODON_INSTANCE_URL`: MastodonインスタンスURL
 - `MASTODON_ACCESS_TOKEN`: Mastodonアクセストークン
+- `POST_VISIBILITY`: Mastodon投稿の公開範囲（public/unlisted/private/direct）
 
 3. フィード設定の調整（オプション）:
 `config.py` のFEED_URLSを編集して監視するフィードを設定
@@ -61,6 +62,7 @@ docker-compose --profile cleanup up --build
 - 記事の保持期間
 - AI要約プロンプト
 - Mastodon投稿設定
+  - **公開範囲**: 投稿の公開レベル（public: 公開, unlisted: 未収載, private: フォロワーのみ, direct: ダイレクト）
 - **時間帯制限**: 投稿を行わない時間帯の設定（生活時間帯を考慮）
   - `ENABLE_QUIET_HOURS`: 時間帯制限の有効/無効
   - `QUIET_HOURS_START`: 投稿禁止開始時刻（24時間形式）

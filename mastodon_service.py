@@ -31,6 +31,12 @@ class MastodonService:
             print("Mastodonに接続されていません")
             return False
         
+        # 公開範囲の検証
+        valid_visibilities = ["public", "unlisted", "private", "direct"]
+        if visibility not in valid_visibilities:
+            print(f"無効な公開範囲: {visibility}. デフォルト(direct)を使用します")
+            visibility = "direct"
+        
         try:
             # 文字数制限チェック（Mastodonは通常500文字）
             if len(content) > 500:
@@ -45,7 +51,7 @@ class MastodonService:
                 print("投稿メソッドが見つかりません")
                 return False
                 
-            print(f"投稿完了: {result['id']}")
+            print(f"投稿完了 ({visibility}): {result['id']}")
             return True
             
         except Exception as e:

@@ -87,6 +87,7 @@ SUMMARY_PROMPT = os.getenv("SUMMARY_PROMPT").replace("\\n", "\n")
 
 # Mastodon投稿設定
 POST_TEMPLATE = os.getenv("POST_TEMPLATE", "").replace("\\n", "\n")
+POST_VISIBILITY = os.getenv("POST_VISIBILITY", "direct")  # public, unlisted, private, direct
 
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL")
