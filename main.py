@@ -133,9 +133,11 @@ class FeedBot:
                 continue
             
             # フィードから記事を取得
-            feed_items = self.feed_reader.fetch_feed_items(source)            # 新着記事のフィルタリング
+            feed_items = self.feed_reader.fetch_feed_items(source)
+            
+            # 新着記事のフィルタリング
             for item in feed_items:
-                # 既読チェック
+                # 既読チェック（IDが存在する場合はスキップ）
                 if item.id in existing_ids:
                     continue
                 
@@ -144,8 +146,7 @@ class FeedBot:
                 if item.published < cutoff_date:
                     continue
                 
-                # 読み取り日時を設定
-                item.read_at = datetime.now()
+                # 新着記事として追加（読み取り日時は処理時に設定）
                 new_articles.append(item)
             
             # フィードソースの最終チェック時刻を更新
@@ -179,6 +180,9 @@ class FeedBot:
         
         for i, article in enumerate(articles, 1):
             print(f"記事処理中 ({i}/{total_articles}): {article.title}")
+            
+            # 記事処理開始時に読み取り日時を設定
+            article.read_at = datetime.now()
             
             # AI要約の生成
             summary = self.ai_service.generate_summary(

@@ -146,16 +146,19 @@ class DataStorage:
         
         filtered_articles = []
         for article in articles:
+            should_keep = False
+            
             # 未処理記事は読み取り日時に関係なく保持
             if not article.processed:
-                filtered_articles.append(article)
-                continue
+                should_keep = True
+            # 処理済み記事は読み取り日時または公開日時で判定
+            elif article.read_at:
+                should_keep = article.read_at >= cutoff_date
+            else:
+                # read_atがない場合は公開日で判定（フォールバック）
+                should_keep = article.published >= cutoff_date
             
-            # 処理済み記事は読み取り日時でフィルタリング
-            if article.read_at and article.read_at >= cutoff_date:
-                filtered_articles.append(article)
-            elif not article.read_at and article.published >= cutoff_date:
-                # read_atがない場合は公開日で判定
+            if should_keep:
                 filtered_articles.append(article)
         
         if len(filtered_articles) < len(articles):
