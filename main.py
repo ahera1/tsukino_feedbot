@@ -175,8 +175,10 @@ class FeedBot:
     
     def _process_new_articles(self, articles: List[FeedItem]):
         """新着記事を処理（要約生成とMastodon投稿）"""
-        for article in articles:
-            print(f"記事処理中: {article.title}")
+        total_articles = len(articles)
+        
+        for i, article in enumerate(articles, 1):
+            print(f"記事処理中 ({i}/{total_articles}): {article.title}")
             
             # AI要約の生成
             summary = self.ai_service.generate_summary(
@@ -199,14 +201,23 @@ class FeedBot:
                 # Mastodonに投稿
                 if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
                     article.posted_to_mastodon = True
-                    print(f"投稿完了: {article.title}")
+                    print(f"投稿完了 ({i}/{total_articles}): {article.title}")
+                    
+                    # Mastodon投稿後の待機（最後の記事以外）
+                    if i < total_articles:
+                        wait_time = getattr(config, 'MASTODON_POST_WAIT', 10)
+                        print(f"次の投稿まで{wait_time}秒待機...")
+                        time.sleep(wait_time)
                 else:
-                    print(f"投稿失敗: {article.title}")
+                    print(f"投稿失敗 ({i}/{total_articles}): {article.title}")
             else:
-                print(f"要約生成失敗: {article.title}")
+                print(f"要約生成失敗 ({i}/{total_articles}): {article.title}")
             
-            # APIレート制限対策で少し待機
-            time.sleep(2)
+            # 記事処理間の待機（最後の記事以外）
+            if i < total_articles:
+                wait_time = getattr(config, 'ARTICLE_PROCESS_WAIT', 5)
+                print(f"次の記事処理まで{wait_time}秒待機...")
+                time.sleep(wait_time)
     
     def run_once(self):
         """一回だけフィードチェックを実行"""
@@ -269,6 +280,12 @@ class FeedBot:
             print(f"時間帯制限: 有効 ({config.QUIET_HOURS_START}:00-{config.QUIET_HOURS_END}:00) - 現在: {quiet_status}")
         else:
             print("時間帯制限: 無効")
+        
+        # ウェイト設定の表示
+        article_wait = getattr(config, 'ARTICLE_PROCESS_WAIT', 5)
+        mastodon_wait = getattr(config, 'MASTODON_POST_WAIT', 10)
+        print(f"記事処理間ウェイト: {article_wait}秒")
+        print(f"Mastodon投稿間ウェイト: {mastodon_wait}秒")
         
         print("\nフィードソース:")
         for source in sources:

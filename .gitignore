@@ -4,8 +4,8 @@ data/
 # ログディレクトリ
 logs/
 
-# 設定ファイル（環境固有）
-config.py
+# フィード設定ファイル（個人設定）
+feeds.json
 
 # Docker環境変数
 .env
