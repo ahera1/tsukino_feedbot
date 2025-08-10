@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  tsukino-feedbot:
+    build: .
+    container_name: tsukino-feedbot
+    volumes:
+      # データディレクトリを永続化
+      - ./data:/app/data
+      # ログディレクトリ（オプション）
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+    restart: unless-stopped
+    
+    # インタラクティブモードで実行する場合
+    stdin_open: true
+    tty: true
+
+  # 継続実行専用サービス（オプション）
+  tsukino-feedbot-daemon:
+    build: .
+    container_name: tsukino-feedbot-daemon
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+    restart: unless-stopped
+    command: python -c "from main import FeedBot; bot = FeedBot(); bot.run_continuous()"
+  # ワンショット実行用サービス
+  tsukino-feedbot-once:
+    build: .
+    container_name: tsukino-feedbot-once
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+      - RUN_MODE=once
+    profiles:
+      - once
+
+  # ステータス確認用サービス
+  tsukino-feedbot-status:
+    build: .
+    container_name: tsukino-feedbot-status
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+      - RUN_MODE=status
+    profiles:
+      - status
+
+  # クリーンアップ用サービス
+  tsukino-feedbot-cleanup:
+    build: .
+    container_name: tsukino-feedbot-cleanup
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+      - RUN_MODE=cleanup
+    profiles:
+      - cleanup
