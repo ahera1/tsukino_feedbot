@@ -5,6 +5,7 @@ Tsukino Feedbot - AIを活用したフィード要約・Mastodon投稿ボット
 
 import os
 import time
+import logging
 from datetime import datetime, timedelta
 from typing import List
 
@@ -27,6 +28,7 @@ class FeedBot:
     """フィードボットのメインクラス"""
     
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.storage = DataStorage()
         self.feed_reader = FeedReader()
         self.ai_service = create_ai_service_manager(config.AI_CONFIGS)
@@ -208,8 +210,10 @@ class FeedBot:
                     article.content,
                     config.SUMMARY_PROMPT
                 )
+                self.logger.debug(f"要約生成完了: {article.title} (ID: {article.id})")
             except Exception as e:
                 print(f"AI要約生成エラー ({i}/{total_articles}): {article.title} - {str(e)}")
+                self.logger.error(f"AI要約生成エラー: {article.title} (ID: {article.id}) - {str(e)}")
                 summary = None
             
             if summary:

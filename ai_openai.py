@@ -42,7 +42,9 @@ class OpenAIService(AIServiceBase):
             
             result = response.json()
             if "choices" in result and result["choices"]:
-                return result["choices"][0]["message"]["content"].strip()
+                summary = result["choices"][0]["message"]["content"].strip()
+                logger.debug(f"{self.name}: 要約生成成功 (文字数: {len(summary)})")
+                return summary
             else:
                 raise ValueError(f"予期しないレスポンス形式: {result}")
                 

@@ -57,6 +57,7 @@ class AIServiceManager:
                 logger.info(f"{service.name}で要約生成を試行中...")
                 summary = service.generate_summary(title, content, prompt_template)
                 logger.info(f"{service.name}で要約生成に成功")
+                logger.debug(f"要約結果: {summary[:100]}...")
                 print(f"✅ {service.name}で要約生成完了: {title[:50]}...")
                 return summary
                 

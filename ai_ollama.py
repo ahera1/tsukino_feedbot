@@ -35,7 +35,9 @@ class OllamaService(AIServiceBase):
             
             result = response.json()
             if "message" in result and "content" in result["message"]:
-                return result["message"]["content"].strip()
+                summary = result["message"]["content"].strip()
+                logger.debug(f"{self.name}: 要約生成成功 (文字数: {len(summary)})")
+                return summary
             else:
                 raise ValueError(f"予期しないレスポンス形式: {result}")
                 
