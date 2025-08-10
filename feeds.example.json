@@ -8,25 +8,5 @@
     "url": "https://qiita.com/popular-items/feed",
     "name": "Qiita人気記事",
     "comment": "プログラミング知識共有サービスの人気記事"
-  },
-  {
-    "url": "https://dev.classmethod.jp/feed/",
-    "name": "クラスメソッド開発ブログ",
-    "comment": "AWS・クラウド技術の情報発信"
-  },
-  {
-    "url": "https://blog.cybozu.io/feed",
-    "name": "Cybozu Labs",
-    "comment": "サイボウズの技術ブログ"
-  },
-  {
-    "url": "https://techblog.yahoo.co.jp/atom.xml",
-    "name": "Yahoo! JAPAN Tech Blog",
-    "comment": "Yahoo! JAPANの技術ブログ"
-  },
-  {
-    "url": "https://engineering.mercari.com/blog/feed.xml",
-    "name": "Mercari Engineering Blog",
-    "comment": "メルカリのエンジニアリングブログ"
   }
 ]

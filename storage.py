@@ -14,6 +14,12 @@ class DataStorage:
         self.data_dir.mkdir(exist_ok=True)
         self.feeds_file = self.data_dir / "feeds.json"
         self.articles_file = self.data_dir / "articles.json"
+        
+        # 初期ファイルが存在しない場合は空のファイルを作成
+        if not self.articles_file.exists():
+            self.save_articles([])
+        if not self.feeds_file.exists():
+            self.save_feed_sources([])
     
     def load_feed_sources(self) -> List[FeedSource]:
         """フィードソース一覧を読み込む"""
@@ -113,10 +119,24 @@ class DataStorage:
                     item['read_at'] = article.read_at.isoformat()
                 data.append(item)
             
+            # バックアップファイルを作成
+            if self.articles_file.exists():
+                backup_file = self.articles_file.with_suffix('.json.bak')
+                import shutil
+                shutil.copy2(self.articles_file, backup_file)
+            
             with open(self.articles_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+                
+            print(f"記事データ保存完了: {len(data)}件")
         except Exception as e:
             print(f"記事保存エラー: {e}")
+            # バックアップから復元を試行
+            backup_file = self.articles_file.with_suffix('.json.bak')
+            if backup_file.exists():
+                print("バックアップから復元を試行中...")
+                import shutil
+                shutil.copy2(backup_file, self.articles_file)
     
     def cleanup_old_articles(self, days: int):
         """指定日数より古い記事を削除"""

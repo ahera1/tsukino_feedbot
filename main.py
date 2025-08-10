@@ -124,6 +124,9 @@ class FeedBot:
         existing_articles = self.storage.load_articles()
         existing_ids = {article.id for article in existing_articles}
         
+        print(f"既存記事数: {len(existing_articles)}")
+        print(f"既存記事ID数: {len(existing_ids)}")
+        
         # フィードソースの読み込み
         feed_sources = self.storage.load_feed_sources()
         new_articles = []
@@ -139,15 +142,18 @@ class FeedBot:
             for item in feed_items:
                 # 既読チェック（IDが存在する場合はスキップ）
                 if item.id in existing_ids:
+                    print(f"既読記事をスキップ: {item.title[:50]}...")
                     continue
                 
                 # 日付チェック（指定期間内のみ）
                 cutoff_date = datetime.now() - timedelta(days=config.ARTICLE_RETENTION_DAYS)
                 if item.published < cutoff_date:
+                    print(f"古い記事をスキップ: {item.title[:50]}... (公開日: {item.published})")
                     continue
                 
                 # 新着記事として追加（読み取り日時は処理時に設定）
                 new_articles.append(item)
+                print(f"新着記事として追加: {item.title[:50]}...")
             
             # フィードソースの最終チェック時刻を更新
             source.last_checked = datetime.now()
@@ -157,13 +163,23 @@ class FeedBot:
         
         print(f"{len(new_articles)}件の新着記事を発見")
         
-        # 新着記事の処理
+        # 新着記事の処理とデータ保存を改善
         if new_articles:
-            self._process_new_articles(new_articles)
+            # まず新着記事を全て保存（AI処理の成否に関わらず既読管理のため）
+            for article in new_articles:
+                article.read_at = datetime.now()  # 読み取り日時を設定
             
-            # 記事の保存
+            # 記事をいったん保存（既読管理のため）
             all_articles = existing_articles + new_articles
             self.storage.save_articles(all_articles)
+            print(f"新着記事{len(new_articles)}件を保存しました（AI処理前）")
+            
+            # AI要約とMastodon投稿の処理
+            self._process_new_articles(new_articles)
+            
+            # 処理後の記事を再保存（AI処理結果を反映）
+            self.storage.save_articles(all_articles)
+            print(f"AI処理結果を反映して記事を再保存しました")
         
         # 古い記事のクリーンアップ（通常のクリーンアップ）
         self.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
@@ -181,15 +197,20 @@ class FeedBot:
         for i, article in enumerate(articles, 1):
             print(f"記事処理中 ({i}/{total_articles}): {article.title}")
             
-            # 記事処理開始時に読み取り日時を設定
-            article.read_at = datetime.now()
+            # 記事処理開始時に読み取り日時を設定（既に設定済みだが念のため）
+            if not article.read_at:
+                article.read_at = datetime.now()
             
             # AI要約の生成
-            summary = self.ai_service.generate_summary(
-                article.title,
-                article.content,
-                config.SUMMARY_PROMPT
-            )
+            try:
+                summary = self.ai_service.generate_summary(
+                    article.title,
+                    article.content,
+                    config.SUMMARY_PROMPT
+                )
+            except Exception as e:
+                print(f"AI要約生成エラー ({i}/{total_articles}): {article.title} - {str(e)}")
+                summary = None
             
             if summary:
                 article.summary = summary
@@ -214,8 +235,9 @@ class FeedBot:
                         time.sleep(wait_time)
                 else:
                     print(f"投稿失敗 ({i}/{total_articles}): {article.title}")
+                    article.processed = True  # 要約は成功したので処理済みとマーク
             else:
-                print(f"要約生成失敗 ({i}/{total_articles}): {article.title}")
+                print(f"要約生成失敗 ({i}/{total_articles}): {article.title} - 記事は保存されましたが要約されていません")
             
             # 記事処理間の待機（最後の記事以外）
             if i < total_articles:
@@ -277,6 +299,13 @@ class FeedBot:
         print(f"投稿済み記事数: {len([a for a in articles if a.posted_to_mastodon])}")
         print(f"本日読み取り記事数: {len(today_articles)}")
         print(f"過去7日間読み取り記事数: {len(week_articles)}")
+        
+        # データファイルの状態確認
+        articles_file = self.storage.articles_file
+        feeds_file = self.storage.feeds_file
+        print(f"\nデータファイル状態:")
+        print(f"  articles.json: 存在={articles_file.exists()}, サイズ={articles_file.stat().st_size if articles_file.exists() else 0}bytes")
+        print(f"  feeds.json: 存在={feeds_file.exists()}, サイズ={feeds_file.stat().st_size if feeds_file.exists() else 0}bytes")
         
         # 時間帯制限の状況表示
         if config.ENABLE_QUIET_HOURS:

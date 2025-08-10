@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # アプリケーションファイルをコピー
 COPY *.py ./
 COPY *.json ./
+
+# データディレクトリを作成し、初期ファイルをコピー
+RUN mkdir -p /app/data
 COPY data/ ./data/
 
 # データディレクトリのパーミッションを設定
