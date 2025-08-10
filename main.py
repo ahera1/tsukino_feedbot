@@ -18,7 +18,7 @@ except ImportError:
 
 from storage import DataStorage
 from feed_reader import FeedReader
-from ai_service import AIService
+from ai_service import create_ai_service_manager
 from mastodon_service import MastodonService
 from models import FeedItem, FeedSource
 
@@ -29,7 +29,7 @@ class FeedBot:
     def __init__(self):
         self.storage = DataStorage()
         self.feed_reader = FeedReader()
-        self.ai_service = AIService(config.OPENROUTER_API_KEY, config.OPENROUTER_MODEL)
+        self.ai_service = create_ai_service_manager(config.AI_CONFIGS)
         self.mastodon_service = MastodonService(
             config.MASTODON_INSTANCE_URL,
             config.MASTODON_ACCESS_TOKEN

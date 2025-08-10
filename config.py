@@ -20,9 +20,50 @@ def load_feed_urls():
 
 FEED_URLS = load_feed_urls()
 
-# 環境変数から設定を読み込み
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
+def get_optional_int(env_var: str, default: str = None) -> int:
+    """環境変数から整数を取得。空文字の場合はNoneを返す"""
+    value = os.getenv(env_var, default or "")
+    if not value or value.strip() == "":
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+def get_optional_float(env_var: str, default: str = None) -> float:
+    """環境変数から浮動小数点数を取得。空文字の場合はNoneを返す"""
+    value = os.getenv(env_var, default or "")
+    if not value or value.strip() == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+# AI API設定（優先順位順）
+AI_CONFIGS = [
+    {
+        "name": "OpenRouter",
+        "api_key": None,  # .envファイルで設定
+        "model": os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-thinking-exp-1219:free"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+    },
+    {
+        "name": "OpenAI",
+        "api_key": None,  # .envファイルで設定
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-nano"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+    },
+    {
+        "name": "Ollama",
+        "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api/chat"),
+        "model": os.getenv("OLLAMA_MODEL", "llama2"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+    }
+]
 
 # Mastodon設定
 MASTODON_INSTANCE_URL = os.getenv("MASTODON_INSTANCE_URL")
