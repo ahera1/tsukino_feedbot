@@ -245,7 +245,7 @@ class FeedBot:
                 # 静音時間帯チェック
                 if self._is_quiet_hours():
                     print("現在は静音時間帯です。次のチェックまで待機します。")
-                    time.sleep(60)  # 1分待機してから再チェック
+                    time.sleep(600)  # 10分待機してから再チェック
                     continue
                 
                 self.check_feeds()
