@@ -4,6 +4,9 @@ data/
 # ログディレクトリ
 logs/
 
+# 設定ファイル（環境固有）
+config.py
+
 # Docker環境変数
 .env
 

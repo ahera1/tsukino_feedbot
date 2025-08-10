@@ -14,13 +14,57 @@ MASTODON_ACCESS_TOKEN = os.getenv("MASTODON_ACCESS_TOKEN")
 # フィード設定
 FEED_URLS = [
     {
-        "url": "https://feeds.feedburner.com/TheHackersNews",
-        "name": "The Hackers News"
+        "url": "https://blackhatnews.tokyo/feed",
+        "name": "TokyoBlackHatNews"
     },
     {
-        "url": "https://qiita.com/popular-items/feed",
-        "name": "Qiita人気記事"
+        "url": "https://flattsecurity.hatenablog.com/rss",
+        "name": "GMO Flatt Security Blog"
     },
+    {
+        "url": "https://gmo-cybersecurity.com/blog/feed/",
+        "name": "GMO Cyber Security Blog"
+    },
+    {
+        "url": "https://www.lac.co.jp/lacwatch/feed.xml",
+        "name": "LAC Watch"
+    },
+    {
+        "url": "https://rocket-boys.co.jp/feed/",
+        "name": "Rocket Boys"
+    },
+    {
+        "url": "https://www.jpcert.or.jp/rss/jpcert.rdf",
+        "name": "JPCERT Weekly Report"
+    },
+    {
+        "url": "https://japansecuritysummit.org/feed/",
+        "name": "Japan Security Summit"
+    },
+    {
+        "url": "http://d.hatena.ne.jp/Kango/rss",
+        "name": "piyolog"
+    },
+    {
+        "url": "https://www.microsoft.com/en-us/security/blog/feed/",
+        "name": "Microsoft Security Blog"
+    },
+    {
+        "url": "http://blog.portswigger.net/feeds/posts/default",
+        "name": "PortSwigger Blog"
+    },
+    {
+        "url": "http://googleonlinesecurity.blogspot.com/atom.xml",
+        "name": "Google Online Security Blog"
+    },
+    {
+        "url": "http://blog.tokumaru.org/feeds/posts/default",
+        "name": "徳丸浩の日記"
+    },
+    {
+        "url": "http://feeds.feedburner.com/tm-security-blog",
+        "name": "TM Security Blog"
+    }
     # 環境変数からフィードURLを追加する例
     # {
     #     "url": os.getenv("ADDITIONAL_FEED_URL"),

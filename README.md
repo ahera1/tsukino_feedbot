@@ -6,9 +6,10 @@ AIを活用したフィード要約・Mastodon投稿ボット
 
 ### Docker環境（推奨）
 
-1. 環境変数ファイルの準備:
+1. 設定ファイルの準備:
 ```bash
 copy .env.example .env
+copy config.example.py config.py
 ```
 
 2. 環境変数の設定:
@@ -17,7 +18,10 @@ copy .env.example .env
 - `MASTODON_INSTANCE_URL`: MastodonインスタンスURL
 - `MASTODON_ACCESS_TOKEN`: Mastodonアクセストークン
 
-3. 実行:
+3. フィード設定の調整（オプション）:
+`config.py` のFEED_URLSを編集して監視するフィードを設定
+
+4. 実行:
 
 **インタラクティブモード（メニュー操作）:**
 ```bash

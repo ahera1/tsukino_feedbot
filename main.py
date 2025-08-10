@@ -13,7 +13,7 @@ try:
     import config
 except ImportError:
     print("設定ファイル config.py が見つかりません。")
-    print("config.example.py をコピーして config.py を作成してください。")
+    print("config.example.py を config.py にコピーして使用してください。")
     exit(1)
 
 from storage import DataStorage

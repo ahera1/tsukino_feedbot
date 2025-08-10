@@ -33,6 +33,11 @@ CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES"))
 ARTICLE_RETENTION_DAYS = int(os.getenv("ARTICLE_RETENTION_DAYS"))
 READ_RECORD_RETENTION_DAYS = int(os.getenv("READ_RECORD_RETENTION_DAYS"))
 
+# 時間帯制限設定
+ENABLE_QUIET_HOURS = os.getenv("ENABLE_QUIET_HOURS", "false").lower() == "true"
+QUIET_HOURS_START = int(os.getenv("QUIET_HOURS_START", "23"))
+QUIET_HOURS_END = int(os.getenv("QUIET_HOURS_END", "7"))
+
 # AI要約プロンプト
 SUMMARY_PROMPT = os.getenv("SUMMARY_PROMPT").replace("\\n", "\n")
 

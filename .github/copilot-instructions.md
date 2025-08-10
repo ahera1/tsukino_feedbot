@@ -54,8 +54,10 @@ config.example.py    - 設定ファイルの例
 ## 設定管理
 - 環境変数で設定を管理（.envファイル使用）
 - .env.example を .env にコピーして使用
+- config.example.py を config.py にコピーして使用
 - APIキーやアクセストークンは.envファイルで管理
-- gitignoreで.envを除外
+- フィード設定などは config.py で管理
+- config.py と .env は .gitignore で除外
 
 ## 動作設定
 - フィード取得間隔は設定可能（デフォルト60分）
