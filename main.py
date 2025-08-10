@@ -58,9 +58,15 @@ class FeedBot:
     def _initialize_feed_sources(self):
         """設定からフィードソースを初期化"""
         existing_sources = self.storage.load_feed_sources()
+        existing_urls = {source.url for source in existing_sources}
+        
+        # 設定ファイルに定義されたフィードURL
+        config_urls = {feed_config["url"] for feed_config in config.FEED_URLS}
+        
+        sources_updated = False
         
         if not existing_sources:
-            # 設定からフィードソースを作成
+            # 初回初期化：設定からフィードソースを作成
             sources = []
             for feed_config in config.FEED_URLS:
                 source = FeedSource(
@@ -71,6 +77,39 @@ class FeedBot:
             
             self.storage.save_feed_sources(sources)
             print(f"{len(sources)}個のフィードソースを初期化しました")
+        else:
+            # 設定ファイルにある新しいフィードを追加
+            new_feeds = []
+            for feed_config in config.FEED_URLS:
+                if feed_config["url"] not in existing_urls:
+                    new_feed = FeedSource(
+                        url=feed_config["url"],
+                        name=feed_config["name"]
+                    )
+                    existing_sources.append(new_feed)
+                    new_feeds.append(new_feed)
+                    sources_updated = True
+            
+            # 設定ファイルから削除されたフィードを無効化（削除はしない）
+            removed_feeds = []
+            for source in existing_sources:
+                if source.url not in config_urls and source.enabled:
+                    source.enabled = False
+                    removed_feeds.append(source)
+                    sources_updated = True
+            
+            if sources_updated:
+                self.storage.save_feed_sources(existing_sources)
+                if new_feeds:
+                    print(f"{len(new_feeds)}個の新しいフィードソースを追加しました:")
+                    for feed in new_feeds:
+                        print(f"  - {feed.name}: {feed.url}")
+                if removed_feeds:
+                    print(f"{len(removed_feeds)}個のフィードソースを無効化しました:")
+                    for feed in removed_feeds:
+                        print(f"  - {feed.name}: {feed.url}")
+            else:
+                print("フィードソースの変更はありませんでした")
     
     def check_feeds(self):
         """フィードをチェックして新着記事を処理"""
@@ -297,8 +336,9 @@ def main():
     print("1. 一回だけ実行")
     print("2. 継続実行")
     print("3. ステータス確認")
-    print("4. データクリーンアップ")
-    print("5. 終了")
+    print("4. フィード設定の同期")
+    print("5. データクリーンアップ")
+    print("6. 終了")
     print("\n💡 Docker環境では環境変数 RUN_MODE でも実行可能:")
     print("   RUN_MODE=once    # ワンショット実行")
     print("   RUN_MODE=daemon  # デーモン実行")
@@ -311,7 +351,7 @@ def main():
             
             # より堅牢な入力処理
             try:
-                choice = input("選択してください (1-5): ").strip()
+                choice = input("選択してください (1-6): ").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\n👋 終了します。")
                 break
@@ -332,16 +372,19 @@ def main():
                 print("📊 ステータス確認中...")
                 bot.show_status()
             elif choice == "4":
+                print("🔄 フィード設定を同期中...")
+                bot._initialize_feed_sources()
+            elif choice == "5":
                 print("🧹 データクリーンアップを実行中...")
                 bot.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
                 read_record_days = getattr(config, 'READ_RECORD_RETENTION_DAYS', 3)
                 bot.storage.cleanup_old_read_records(read_record_days)
                 print("✅ クリーンアップ完了")
-            elif choice == "5":
+            elif choice == "6":
                 print("👋 終了します。")
                 break
             else:
-                print("❌ 無効な選択です。1-5を選択してください。")
+                print("❌ 無効な選択です。1-6を選択してください。")
                 
         except KeyboardInterrupt:
             print("\n👋 終了が要求されました。")
