@@ -1,33 +1,8 @@
 version: '3.8'
 
 services:
-  tsukino-feedbot:
-    build: .
-    container_name: tsukino-feedbot
-    volumes:
-      # データディレクトリを永続化
-      - ./data:/app/data
-      # ログディレクトリ（オプション）
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    environment:
-      - TZ=Asia/Tokyo
-    restart: unless-stopped
-    
-    # ヘルスチェック（データファイルの存在確認）
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    
-    # インタラクティブモードで実行する場合
-    stdin_open: true
-    tty: true
 
-  # 継続実行専用サービス（オプション）
+  # 継続実行専用サービス（デーモンモード）
   tsukino-feedbot-daemon:
     build: .
     container_name: tsukino-feedbot-daemon
@@ -40,6 +15,16 @@ services:
       - TZ=Asia/Tokyo
     restart: unless-stopped
     command: python -c "from main import FeedBot; bot = FeedBot(); bot.run_continuous()"
+    profiles:
+      - daemon
+    
+    # ヘルスチェック（データファイルの存在確認）
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
   # ワンショット実行用サービス
   tsukino-feedbot-once:
     build: .
@@ -54,6 +39,14 @@ services:
       - RUN_MODE=once
     profiles:
       - once
+    
+    # ヘルスチェック（データファイルの存在確認）
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ステータス確認用サービス
   tsukino-feedbot-status:
@@ -69,6 +62,14 @@ services:
       - RUN_MODE=status
     profiles:
       - status
+    
+    # ヘルスチェック（データファイルの存在確認）
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # クリーンアップ用サービス
   tsukino-feedbot-cleanup:
@@ -84,3 +85,11 @@ services:
       - RUN_MODE=cleanup
     profiles:
       - cleanup
+    
+    # ヘルスチェック（データファイルの存在確認）
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -27,11 +27,6 @@ copy feeds.example.json feeds.json
 
 4. 実行:
 
-**インタラクティブモード（メニュー操作）:**
-```bash
-docker-compose up --build
-```
-
 **デーモンモード（バックグラウンド自動実行）:**
 ```bash
 docker-compose --profile daemon up -d --build
