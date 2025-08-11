@@ -87,8 +87,7 @@ POST_TEMPLATE = os.getenv("POST_TEMPLATE", "").replace("\\n", "\n")
 POST_VISIBILITY = os.getenv("POST_VISIBILITY", "direct")  # public, unlisted, private, direct
 
 # ウェイト設定（秒）
-ARTICLE_PROCESS_WAIT = int(os.getenv("ARTICLE_PROCESS_WAIT", "5"))  # 記事処理間の待機時間
-MASTODON_POST_WAIT = int(os.getenv("MASTODON_POST_WAIT", "10"))     # Mastodon投稿間の待機時間
+POST_WAIT = int(os.getenv("POST_WAIT", "60"))  # 投稿処理間の待機時間
 
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL")

@@ -73,9 +73,8 @@ docker-compose --profile cleanup up --build
   - `ENABLE_QUIET_HOURS`: 時間帯制限の有効/無効
   - `QUIET_HOURS_START`: 投稿禁止開始時刻（24時間形式）
   - `QUIET_HOURS_END`: 投稿禁止終了時刻（24時間形式）
-- **ウェイト設定**: 連続処理・投稿を防ぐための待機時間
-  - `ARTICLE_PROCESS_WAIT`: 記事処理間の待機時間（秒、デフォルト: 5秒）
-  - `MASTODON_POST_WAIT`: Mastodon投稿間の待機時間（秒、デフォルト: 10秒）
+- **ウェイト設定**: 連続投稿を防ぐための待機時間
+  - `POST_WAIT`: 投稿処理間の待機時間（秒、デフォルト: 60秒）
 
 ## Docker実行モード
 

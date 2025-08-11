@@ -231,21 +231,15 @@ class FeedBot:
                 if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
                     article.posted_to_mastodon = True
                     print(f"投稿完了 ({i}/{total_articles}): {article.title}")
-                    
-                    # Mastodon投稿後の待機（最後の記事以外）
-                    if i < total_articles:
-                        wait_time = getattr(config, 'MASTODON_POST_WAIT', 10)
-                        print(f"次の投稿まで{wait_time}秒待機...")
-                        time.sleep(wait_time)
                 else:
                     print(f"投稿失敗 ({i}/{total_articles}): {article.title}")
                     article.processed = True  # 要約は成功したので処理済みとマーク
             else:
                 print(f"要約生成失敗 ({i}/{total_articles}): {article.title} - 記事は保存されましたが要約されていません")
             
-            # 記事処理間の待機（最後の記事以外）
+            # 投稿処理間の待機（最後の記事以外）
             if i < total_articles:
-                wait_time = getattr(config, 'ARTICLE_PROCESS_WAIT', 5)
+                wait_time = getattr(config, 'POST_WAIT', 60)
                 print(f"次の記事処理まで{wait_time}秒待機...")
                 time.sleep(wait_time)
     
@@ -319,10 +313,8 @@ class FeedBot:
             print("時間帯制限: 無効")
         
         # ウェイト設定の表示
-        article_wait = getattr(config, 'ARTICLE_PROCESS_WAIT', 5)
-        mastodon_wait = getattr(config, 'MASTODON_POST_WAIT', 10)
-        print(f"記事処理間ウェイト: {article_wait}秒")
-        print(f"Mastodon投稿間ウェイト: {mastodon_wait}秒")
+        post_wait = getattr(config, 'POST_WAIT', 10)
+        print(f"投稿処理間ウェイト: {post_wait}秒")
         
         print("\nフィードソース:")
         for source in sources:
