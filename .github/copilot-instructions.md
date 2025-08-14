@@ -32,18 +32,30 @@ main.py              - CLIメニューと主要ロジック
 models.py            - FeedItem, FeedSource dataclass定義
 storage.py           - JSON読み書き機能
 feed_reader.py       - RSSフィード取得
-ai_service.py        - OpenRouter API連携
+ai_manager.py        - AI APIマネージャー（複数API対応・フォールバック機能）
+ai_base.py           - AI API基底クラス
+ai_openrouter.py     - OpenRouter API連携
+ai_openai.py         - OpenAI API連携
+ai_ollama.py         - Ollama API連携（ローカルLLM対応）
+ai_service.py        - 旧AI APIサービス（互換性維持）
 mastodon_service.py  - Mastodon API連携
-config.example.py    - 設定ファイルの例
+config.py            - 設定ファイル（環境変数読み込み）
+.env.example         - 環境変数設定例
+feeds.example.json   - フィード設定例
 ```
 
 ## 機能一覧
 1. RSSフィードの定期監視
-2. AI要約生成（OpenRouter API）
+2. AI要約生成（複数AI API対応・自動フォールバック機能）
+   - OpenRouter API（プライマリ）
+   - OpenAI API（セカンダリ）
+   - Ollama API（ローカルLLM、ターシャリ）
 3. Mastodonへの自動投稿
 4. 既読記事管理（読み取り日時付き）
 5. 古い記事の自動削除（段階的クリーンアップ）
 6. 時間帯制限機能（投稿を行わない時間帯の設定）
+7. Docker対応（デーモンモード・ワンショット実行対応）
+8. 設定の外部ファイル化（JSON・環境変数）
 
 ## 使用ライブラリ
 - requests - HTTP通信
@@ -54,10 +66,10 @@ config.example.py    - 設定ファイルの例
 ## 設定管理
 - 環境変数で設定を管理（.envファイル使用）
 - .env.example を .env にコピーして使用
-- config.example.py を config.py にコピーして使用
 - APIキーやアクセストークンは.envファイルで管理
-- フィード設定などは config.py で管理
-- config.py と .env は .gitignore で除外
+- フィード設定は feeds.json で管理（feeds.example.json をコピー）
+- 汎用的な設定処理は config.py で管理（Git管理対象）
+- 個人設定ファイル（.env と feeds.json）は .gitignore で除外
 
 ## 動作設定
 - フィード取得間隔は設定可能（デフォルト60分）
@@ -65,3 +77,4 @@ config.example.py    - 設定ファイルの例
 - 読み取り記録のみの保持期間（デフォルト3日、JSONファイル肥大化防止）
 - AI要約プロンプトは設定ファイルでカスタマイズ可能
 - 時間帯制限機能（生活時間帯を考慮した投稿禁止時間帯の設定）
+- ウェイト設定（連続投稿を防ぐための待機時間設定）
