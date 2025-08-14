@@ -8,6 +8,7 @@ import time
 import logging
 from datetime import datetime, timedelta
 from typing import List
+from pathlib import Path
 
 # 設定の読み込みを試行
 try:
@@ -22,6 +23,62 @@ from feed_reader import FeedReader
 from ai_service import create_ai_service_manager
 from mastodon_service import MastodonService
 from models import FeedItem, FeedSource
+
+
+def setup_logging():
+    """ログ設定を初期化"""
+    log_level = getattr(config, 'LOG_LEVEL', 'INFO')
+    log_to_file = getattr(config, 'LOG_TO_FILE', False)
+    
+    # ログレベルの設定
+    level = getattr(logging, log_level.upper(), logging.INFO)
+    
+    # ログフォーマットの設定
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # ルートロガーの設定
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    
+    # 既存のハンドラーをクリア
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # コンソールハンドラーの設定（常に追加）
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+    
+    # ファイルハンドラーの設定（設定で有効な場合のみ）
+    if log_to_file:
+        # logsディレクトリが存在しない場合は作成
+        logs_dir = Path('logs')
+        logs_dir.mkdir(exist_ok=True)
+        
+        # ログファイル名（日付付き）
+        log_filename = f"feedbot_{datetime.now().strftime('%Y%m%d')}.log"
+        log_filepath = logs_dir / log_filename
+        
+        # ファイルハンドラーの作成
+        file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+        
+        print(f"ログファイル: {log_filepath}")
+    
+    # 外部ライブラリのログレベル調整
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    
+    print(f"ログレベル: {log_level}")
+    print(f"ファイル出力: {'有効' if log_to_file else '無効'}")
+    
+    return logging.getLogger(__name__)
 
 
 class FeedBot:
@@ -116,10 +173,13 @@ class FeedBot:
     def check_feeds(self):
         """フィードをチェックして新着記事を処理"""
         print(f"フィードチェック開始: {datetime.now()}")
+        self.logger.info("フィードチェック開始")
         
         # 投稿禁止時間帯チェック
         if self._is_quiet_hours():
-            print("現在は投稿禁止時間帯です。フィード取得をスキップします。")
+            message = "現在は投稿禁止時間帯です。フィード取得をスキップします。"
+            print(message)
+            self.logger.info(message)
             return
         
         # 既存記事の読み込み
@@ -128,17 +188,24 @@ class FeedBot:
         
         print(f"既存記事数: {len(existing_articles)}")
         print(f"既存記事ID数: {len(existing_ids)}")
+        self.logger.info(f"既存記事数: {len(existing_articles)}, 既存ID数: {len(existing_ids)}")
         
         # フィードソースの読み込み
         feed_sources = self.storage.load_feed_sources()
         new_articles = []
         
+        self.logger.info(f"{len(feed_sources)}個のフィードソースを処理開始")
+        
         for source in feed_sources:
             if not source.enabled:
                 continue
             
+            self.logger.info(f"フィード取得開始: {source.name} ({source.url})")
+            
             # フィードから記事を取得
             feed_items = self.feed_reader.fetch_feed_items(source)
+            
+            self.logger.info(f"フィード取得完了: {source.name} - {len(feed_items)}件")
             
             # 新着記事のフィルタリング
             for item in feed_items:
@@ -151,11 +218,13 @@ class FeedBot:
                 cutoff_date = datetime.now() - timedelta(days=config.ARTICLE_RETENTION_DAYS)
                 if item.published < cutoff_date:
                     print(f"古い記事をスキップ: {item.title[:50]}... (公開日: {item.published})")
+                    self.logger.debug(f"古い記事をスキップ: {item.title} (公開日: {item.published})")
                     continue
                 
                 # 新着記事として追加（読み取り日時は処理時に設定）
                 new_articles.append(item)
                 print(f"新着記事として追加: {item.title[:50]}...")
+                self.logger.info(f"新着記事発見: {item.title}")
             
             # フィードソースの最終チェック時刻を更新
             source.last_checked = datetime.now()
@@ -164,6 +233,7 @@ class FeedBot:
         self.storage.save_feed_sources(feed_sources)
         
         print(f"{len(new_articles)}件の新着記事を発見")
+        self.logger.info(f"{len(new_articles)}件の新着記事を発見")
         
         # 新着記事の処理とデータ保存を改善
         if new_articles:
@@ -175,6 +245,7 @@ class FeedBot:
             all_articles = existing_articles + new_articles
             self.storage.save_articles(all_articles)
             print(f"新着記事{len(new_articles)}件を保存しました（AI処理前）")
+            self.logger.info(f"新着記事{len(new_articles)}件を保存完了（AI処理前）")
             
             # AI要約とMastodon投稿の処理
             self._process_new_articles(new_articles)
@@ -182,22 +253,30 @@ class FeedBot:
             # 処理後の記事を再保存（AI処理結果を反映）
             self.storage.save_articles(all_articles)
             print(f"AI処理結果を反映して記事を再保存しました")
+            self.logger.info("AI処理結果を反映して記事を再保存完了")
         
         # 古い記事のクリーンアップ（通常のクリーンアップ）
-        self.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
+        cleaned_count = self.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
+        if cleaned_count > 0:
+            self.logger.info(f"古い記事を{cleaned_count}件クリーンアップ")
         
         # 古い読み取り記録のクリーンアップ（より積極的に削除）
         read_record_retention_days = getattr(config, 'READ_RECORD_RETENTION_DAYS', config.ARTICLE_RETENTION_DAYS // 2)
-        self.storage.cleanup_old_read_records(read_record_retention_days)
+        read_cleaned_count = self.storage.cleanup_old_read_records(read_record_retention_days)
+        if read_cleaned_count > 0:
+            self.logger.info(f"古い読み取り記録を{read_cleaned_count}件クリーンアップ")
         
         print("フィードチェック完了")
+        self.logger.info("フィードチェック完了")
     
     def _process_new_articles(self, articles: List[FeedItem]):
         """新着記事を処理（要約生成とMastodon投稿）"""
         total_articles = len(articles)
+        self.logger.info(f"新着記事の処理開始: {total_articles}件")
         
         for i, article in enumerate(articles, 1):
             print(f"記事処理中 ({i}/{total_articles}): {article.title}")
+            self.logger.info(f"記事処理開始 ({i}/{total_articles}): {article.title}")
             
             # 記事処理開始時に読み取り日時を設定（既に設定済みだが念のため）
             if not article.read_at:
@@ -210,10 +289,12 @@ class FeedBot:
                     article.content,
                     config.SUMMARY_PROMPT
                 )
-                self.logger.debug(f"要約生成完了: {article.title} (ID: {article.id})")
+                self.logger.info(f"AI要約生成完了: {article.title} (ID: {article.id})")
+                self.logger.debug(f"要約内容: {summary}")
             except Exception as e:
-                print(f"AI要約生成エラー ({i}/{total_articles}): {article.title} - {str(e)}")
-                self.logger.error(f"AI要約生成エラー: {article.title} (ID: {article.id}) - {str(e)}")
+                error_msg = f"AI要約生成エラー ({i}/{total_articles}): {article.title} - {str(e)}"
+                print(error_msg)
+                self.logger.error(f"AI要約生成エラー: {article.title} (ID: {article.id}) - {str(e)}", exc_info=True)
                 summary = None
             
             if summary:
@@ -227,21 +308,32 @@ class FeedBot:
                     url=article.url
                 )
                 
+                self.logger.debug(f"Mastodon投稿内容: {post_content}")
+                
                 # Mastodonに投稿
                 if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
                     article.posted_to_mastodon = True
-                    print(f"投稿完了 ({i}/{total_articles}): {article.title}")
+                    success_msg = f"投稿完了 ({i}/{total_articles}): {article.title}"
+                    print(success_msg)
+                    self.logger.info(f"Mastodon投稿完了: {article.title} (ID: {article.id})")
                 else:
-                    print(f"投稿失敗 ({i}/{total_articles}): {article.title}")
+                    failure_msg = f"投稿失敗 ({i}/{total_articles}): {article.title}"
+                    print(failure_msg)
+                    self.logger.warning(f"Mastodon投稿失敗: {article.title} (ID: {article.id})")
                     article.processed = True  # 要約は成功したので処理済みとマーク
             else:
-                print(f"要約生成失敗 ({i}/{total_articles}): {article.title} - 記事は保存されましたが要約されていません")
+                failure_msg = f"要約生成失敗 ({i}/{total_articles}): {article.title} - 記事は保存されましたが要約されていません"
+                print(failure_msg)
+                self.logger.warning(f"要約生成失敗による記事スキップ: {article.title} (ID: {article.id})")
             
             # 投稿処理間の待機（最後の記事以外）
             if i < total_articles:
                 wait_time = getattr(config, 'POST_WAIT', 60)
                 print(f"次の記事処理まで{wait_time}秒待機...")
+                self.logger.debug(f"次の記事処理まで{wait_time}秒待機")
                 time.sleep(wait_time)
+        
+        self.logger.info(f"新着記事の処理完了: {total_articles}件")
     
     def run_once(self):
         """一回だけフィードチェックを実行"""
@@ -327,6 +419,10 @@ def main():
     """メイン関数"""
     print("=== Tsukino Feedbot 初期化中 ===")
     
+    # ログ設定の初期化
+    logger = setup_logging()
+    logger.info("Tsukino Feedbot 起動開始")
+    
     # 環境変数チェック
     required_env_vars = [
         'OPENROUTER_API_KEY',
@@ -342,39 +438,52 @@ def main():
             missing_vars.append(var)
     
     if missing_vars:
-        print(f"❌ 必要な環境変数が設定されていません: {', '.join(missing_vars)}")
+        error_msg = f"必要な環境変数が設定されていません: {', '.join(missing_vars)}"
+        print(f"❌ {error_msg}")
+        logger.error(error_msg)
         print("💡 .env ファイルを確認してください。")
         return
     
     try:
         bot = FeedBot()
+        logger.info("FeedBot初期化完了")
     except Exception as e:
-        print(f"❌ ボット初期化エラー: {e}")
+        error_msg = f"ボット初期化エラー: {e}"
+        print(f"❌ {error_msg}")
+        logger.error(error_msg, exc_info=True)
         return
     
     print("✅ 初期化完了")
+    logger.info("初期化完了")
     
     # Docker環境での入力問題を回避するため、環境変数でモード指定可能にする
     run_mode = os.getenv("RUN_MODE", "interactive")
     
     if run_mode == "once":
         print("🚀 ワンショット実行モード")
+        logger.info("ワンショット実行モード開始")
         bot.run_once()
+        logger.info("ワンショット実行モード完了")
         return
     elif run_mode == "daemon":
         print("🔄 デーモンモード")
+        logger.info("デーモンモード開始")
         bot.run_continuous()
+        logger.info("デーモンモード終了")
         return
     elif run_mode == "status":
         print("📊 ステータス確認モード")
+        logger.info("ステータス確認モード")
         bot.show_status()
         return
     elif run_mode == "cleanup":
         print("🧹 クリーンアップモード")
+        logger.info("クリーンアップモード開始")
         bot.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
         read_record_days = getattr(config, 'READ_RECORD_RETENTION_DAYS', 3)
         bot.storage.cleanup_old_read_records(read_record_days)
         print("✅ クリーンアップ完了")
+        logger.info("クリーンアップ完了")
         return
     
     # インタラクティブモード

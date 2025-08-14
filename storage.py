@@ -154,10 +154,12 @@ class DataStorage:
             if keep_article:
                 filtered_articles.append(article)
         
-        if len(filtered_articles) < len(articles):
+        removed_count = len(articles) - len(filtered_articles)
+        if removed_count > 0:
             self.save_articles(filtered_articles)
-            removed_count = len(articles) - len(filtered_articles)
             print(f"{removed_count}件の古い記事を削除しました")
+        
+        return removed_count
     
     def cleanup_old_read_records(self, days: int):
         """指定日数より古い読み取り記録のみを削除（未処理記事は保持）"""
@@ -181,7 +183,9 @@ class DataStorage:
             if should_keep:
                 filtered_articles.append(article)
         
-        if len(filtered_articles) < len(articles):
+        removed_count = len(articles) - len(filtered_articles)
+        if removed_count > 0:
             self.save_articles(filtered_articles)
-            removed_count = len(articles) - len(filtered_articles)
             print(f"{removed_count}件の古い読み取り記録を削除しました")
+        
+        return removed_count
