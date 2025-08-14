@@ -54,6 +54,9 @@ def create_ai_service_manager(ai_configs: list) -> AIServiceManager:
             model=config_dict.get("model"),
             max_tokens=config_dict.get("max_tokens"),  # Noneの場合はAPIに渡さない
             temperature=config_dict.get("temperature"),  # Noneの場合はAPIに渡さない
+            timeout=config_dict.get("timeout", 60),
+            max_retries=config_dict.get("max_retries", 3),
+            retry_delay=config_dict.get("retry_delay", 10),
             extra_params=config_dict.get("extra_params", {})
         )
         configs.append(ai_config)

@@ -48,6 +48,9 @@ AI_CONFIGS = [
         "model": os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-thinking-exp-1219:free"),
         "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+        "timeout": int(os.getenv("AI_TIMEOUT", "60")),
+        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
+        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     },
     {
         "name": "OpenAI",
@@ -55,6 +58,9 @@ AI_CONFIGS = [
         "model": os.getenv("OPENAI_MODEL", "gpt-4.1-nano"),
         "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+        "timeout": int(os.getenv("AI_TIMEOUT", "60")),
+        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
+        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     },
     {
         "name": "Ollama",
@@ -62,6 +68,9 @@ AI_CONFIGS = [
         "model": os.getenv("OLLAMA_MODEL", "llama2"),
         "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
+        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # Ollamaは少し長めのデフォルト
+        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
+        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     }
 ]
 

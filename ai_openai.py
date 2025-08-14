@@ -37,8 +37,12 @@ class OpenAIService(AIServiceBase):
             data["temperature"] = self.config.temperature
         
         try:
-            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
+            response = self._make_request_with_retry(
+                "POST", 
+                self.base_url, 
+                headers=headers, 
+                json=data
+            )
             
             result = response.json()
             if "choices" in result and result["choices"]:
@@ -49,9 +53,7 @@ class OpenAIService(AIServiceBase):
                 raise ValueError(f"予期しないレスポンス形式: {result}")
                 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                raise Exception(f"{self.name}: レート制限に達しました")
-            elif e.response.status_code in [401, 403]:
+            if e.response.status_code == 401 or e.response.status_code == 403:
                 raise Exception(f"{self.name}: 認証エラー")
             else:
                 raise Exception(f"{self.name}: HTTPエラー {e.response.status_code}")

@@ -30,8 +30,11 @@ class OllamaService(AIServiceBase):
             data["options"]["temperature"] = self.config.temperature
         
         try:
-            response = requests.post(self.base_url, json=data, timeout=60)
-            response.raise_for_status()
+            response = self._make_request_with_retry(
+                "POST",
+                self.base_url,
+                json=data
+            )
             
             result = response.json()
             if "message" in result and "content" in result["message"]:
