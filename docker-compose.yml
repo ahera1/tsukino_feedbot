@@ -13,8 +13,8 @@ services:
       - .env
     environment:
       - TZ=Asia/Tokyo
+      - RUN_MODE=daemon
     restart: unless-stopped
-    command: python -c "from main import FeedBot; bot = FeedBot(); bot.run_continuous()"
     profiles:
       - daemon
     
