@@ -19,8 +19,11 @@ COPY *.json ./
 RUN mkdir -p /app/data
 COPY data/ ./data/
 
-# データディレクトリのパーミッションを設定
-RUN chmod 755 /app && chmod -R 755 /app/data
+# ログディレクトリを作成
+RUN mkdir -p /app/logs
+
+# ディレクトリのパーミッションを設定
+RUN chmod 755 /app && chmod -R 755 /app/data && chmod -R 755 /app/logs
 
 # 非rootユーザーを作成
 RUN useradd -m -u 1000 feedbot && chown -R feedbot:feedbot /app
