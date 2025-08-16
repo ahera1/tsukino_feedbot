@@ -1,4 +1,4 @@
-# Tsukino Feedbot
+# Tsukino Feedbot (月乃 フィードボット)
 
 AIを活用したフィード要約・Mastodon投稿ボット
 
