@@ -6,7 +6,7 @@ Tsukino Feedbot - AIを活用したフィード要約・Mastodon投稿ボット
 import os
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from pathlib import Path
 
@@ -215,8 +215,13 @@ class FeedBot:
                     continue
                 
                 # 日付チェック（指定期間内のみ）
-                cutoff_date = datetime.now() - timedelta(days=config.ARTICLE_RETENTION_DAYS)
-                if item.published < cutoff_date:
+                cutoff_date = datetime.now(timezone.utc) - timedelta(days=config.ARTICLE_RETENTION_DAYS)
+                # publishedがタイムゾーン情報を持たない場合はUTCとして扱う
+                published_time = item.published
+                if published_time.tzinfo is None:
+                    published_time = published_time.replace(tzinfo=timezone.utc)
+                
+                if published_time < cutoff_date:
                     print(f"古い記事をスキップ: {item.title[:50]}... (公開日: {item.published})")
                     self.logger.debug(f"古い記事をスキップ: {item.title} (公開日: {item.published})")
                     continue
