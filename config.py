@@ -98,6 +98,10 @@ POST_VISIBILITY = os.getenv("POST_VISIBILITY", "direct")  # public, unlisted, pr
 # ウェイト設定（秒）
 POST_WAIT = int(os.getenv("POST_WAIT", "60"))  # 投稿処理間の待機時間
 
+# 記事完全性チェック設定
+MIN_TITLE_LENGTH = int(os.getenv("MIN_TITLE_LENGTH", "3"))  # 最小タイトル長
+MIN_CONTENT_LENGTH = int(os.getenv("MIN_CONTENT_LENGTH", "10"))  # 最小本文長
+
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"

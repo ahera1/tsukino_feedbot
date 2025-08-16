@@ -3,10 +3,31 @@ from datetime import datetime
 from typing import List
 from models import FeedItem, FeedSource
 import hashlib
+from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
 
 
 class FeedReader:
     """RSSフィードを読み取り、記事を取得するクラス"""
+    
+    def _is_article_complete(self, entry, min_title_length: int = None, min_content_length: int = None) -> bool:
+        """記事が完全かチェック"""
+        # デフォルト値の設定
+        if min_title_length is None:
+            min_title_length = MIN_TITLE_LENGTH
+        if min_content_length is None:
+            min_content_length = MIN_CONTENT_LENGTH
+        
+        # タイトルチェック
+        title = getattr(entry, 'title', '').strip()
+        if len(title) < min_title_length:
+            return False
+        
+        # 本文チェック（summary または content）
+        content = self._extract_content(entry)
+        if len(content.strip()) < min_content_length:
+            return False
+        
+        return True
     
     def fetch_feed_items(self, feed_source: FeedSource) -> List[FeedItem]:
         """指定されたフィードから記事を取得"""
@@ -18,6 +39,11 @@ class FeedReader:
             
             items = []
             for entry in feed.entries:
+                # 完全性チェック
+                if not self._is_article_complete(entry):
+                    print(f"不完全な記事をスキップ: {getattr(entry, 'link', 'URL不明')}")
+                    continue
+                
                 # 記事の一意IDを生成（URLベース）
                 article_id = hashlib.md5(entry.link.encode()).hexdigest()
                 
