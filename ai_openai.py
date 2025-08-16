@@ -46,6 +46,22 @@ class OpenAIService(AIServiceBase):
             
             result = response.json()
             if "choices" in result and result["choices"]:
+                # トークン使用量を分析
+                usage_info = self._analyze_response_usage(result)
+                
+                # トークン使用量をログ出力
+                if usage_info["total_tokens"]:
+                    logger.info(f"{self.name}: トークン使用量 - 入力: {usage_info['input_tokens']}, "
+                              f"出力: {usage_info['output_tokens']}, 合計: {usage_info['total_tokens']}")
+                    
+                    if usage_info["token_warning"]:
+                        logger.warning(f"{self.name}: トークン使用量が制限の95%に達しました")
+                        print(f"⚠️  {self.name}: トークン使用量警告 - {usage_info['total_tokens']}/{self.config.max_tokens}")
+                    
+                    if usage_info["token_limit_reached"]:
+                        logger.error(f"{self.name}: トークン制限に達しました")
+                        print(f"🚫 {self.name}: トークン制限達成 - {usage_info['total_tokens']}/{self.config.max_tokens}")
+                
                 summary = result["choices"][0]["message"]["content"].strip()
                 logger.debug(f"{self.name}: 要約生成成功 (文字数: {len(summary)})")
                 return summary
@@ -53,6 +69,19 @@ class OpenAIService(AIServiceBase):
                 raise ValueError(f"予期しないレスポンス形式: {result}")
                 
         except requests.exceptions.HTTPError as e:
+            error_response = {}
+            try:
+                error_response = e.response.json() if e.response else {}
+            except:
+                pass
+            
+            # トークン関連エラーをチェック
+            token_error = self._detect_token_related_errors(error_response, e.response.status_code)
+            if token_error:
+                logger.error(f"{self.name}: {token_error}")
+                print(f"🚫 {self.name}: {token_error}")
+                raise Exception(f"{self.name}: {token_error}")
+            
             if e.response.status_code == 401 or e.response.status_code == 403:
                 raise Exception(f"{self.name}: 認証エラー")
             else:

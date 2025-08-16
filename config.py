@@ -45,20 +45,20 @@ AI_CONFIGS = [
     {
         "name": "OpenRouter",
         "api_key": None,  # .envファイルで設定
-        "model": os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-thinking-exp-1219:free"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "model": os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "60")),
+        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     },
     {
         "name": "OpenAI",
         "api_key": None,  # .envファイルで設定
-        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-nano"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "model": os.getenv("OPENAI_MODEL", "gpt-5-nano"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "60")),
+        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     },
@@ -66,9 +66,9 @@ AI_CONFIGS = [
         "name": "Ollama",
         "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api/chat"),
         "model": os.getenv("OLLAMA_MODEL", "llama2"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "1000"),
+        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
         "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # Ollamaは少し長めのデフォルト
+        "timeout": int(os.getenv("AI_TIMEOUT", "180")),  # Ollamaはさらに長めに調整
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
     }
@@ -101,6 +101,9 @@ POST_WAIT = int(os.getenv("POST_WAIT", "60"))  # 投稿処理間の待機時間
 # 記事完全性チェック設定
 MIN_TITLE_LENGTH = int(os.getenv("MIN_TITLE_LENGTH", "3"))  # 最小タイトル長
 MIN_CONTENT_LENGTH = int(os.getenv("MIN_CONTENT_LENGTH", "10"))  # 最小本文長
+
+# 記事遅延処理設定
+FEED_INITIAL_DELAY_MINUTES = int(os.getenv("FEED_INITIAL_DELAY_MINUTES", "5"))  # 新着記事の初期遅延時間（分）
 
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL")

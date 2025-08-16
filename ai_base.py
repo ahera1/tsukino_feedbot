@@ -80,6 +80,58 @@ class AIServiceBase(ABC):
         # 全ての試行が失敗した場合
         raise last_exception
     
+    def _analyze_response_usage(self, response_data: dict) -> dict:
+        """レスポンスからトークン使用量を分析"""
+        usage_info = {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "token_limit_reached": False,
+            "token_warning": False
+        }
+        
+        # OpenAI形式のusageフィールドをチェック
+        if "usage" in response_data:
+            usage = response_data["usage"]
+            usage_info["input_tokens"] = usage.get("prompt_tokens")
+            usage_info["output_tokens"] = usage.get("completion_tokens")
+            usage_info["total_tokens"] = usage.get("total_tokens")
+            
+            # トークン制限チェック
+            if self.config.max_tokens and usage_info["total_tokens"]:
+                if usage_info["total_tokens"] >= self.config.max_tokens * 0.95:  # 95%以上で警告
+                    usage_info["token_warning"] = True
+                if usage_info["total_tokens"] >= self.config.max_tokens:
+                    usage_info["token_limit_reached"] = True
+        
+        return usage_info
+    
+    def _detect_token_related_errors(self, error_response: dict, status_code: int) -> Optional[str]:
+        """エラーレスポンスからトークン関連のエラーを検出"""
+        error_text = str(error_response).lower()
+        
+        # 一般的なトークン不足のエラーメッセージ
+        token_error_indicators = [
+            "maximum context length",
+            "token limit",
+            "too many tokens",
+            "context length exceeded",
+            "input too long",
+            "prompt too long",
+            "max_tokens",
+            "token limit exceeded"
+        ]
+        
+        for indicator in token_error_indicators:
+            if indicator in error_text:
+                return f"トークン不足エラー: {indicator}"
+        
+        # HTTPステータスコードベースの判定
+        if status_code == 413:  # Payload Too Large
+            return "トークン不足エラー: リクエストが大きすぎます"
+        
+        return None
+    
     def is_available(self) -> bool:
         """APIが利用可能かチェック"""
         return True
