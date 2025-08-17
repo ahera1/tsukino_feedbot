@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 from models import FeedItem, FeedSource
@@ -35,6 +35,9 @@ class DataStorage:
                 last_checked = None
                 if item.get('last_checked'):
                     last_checked = datetime.fromisoformat(item['last_checked'])
+                    # タイムゾーン情報がない場合はUTCとして扱う
+                    if last_checked.tzinfo is None:
+                        last_checked = last_checked.replace(tzinfo=timezone.utc)
                 
                 sources.append(FeedSource(
                     url=item['url'],
@@ -78,9 +81,16 @@ class DataStorage:
             articles = []
             for item in data:
                 published = datetime.fromisoformat(item['published'])
+                # タイムゾーン情報がない場合はUTCとして扱う
+                if published.tzinfo is None:
+                    published = published.replace(tzinfo=timezone.utc)
+                
                 read_at = None
                 if item.get('read_at'):
                     read_at = datetime.fromisoformat(item['read_at'])
+                    # タイムゾーン情報がない場合はUTCとして扱う
+                    if read_at.tzinfo is None:
+                        read_at = read_at.replace(tzinfo=timezone.utc)
                 
                 articles.append(FeedItem(
                     id=item['id'],
@@ -141,15 +151,24 @@ class DataStorage:
     def cleanup_old_articles(self, days: int):
         """指定日数より古い記事を削除"""
         articles = self.load_articles()
-        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         # 公開日または読み取り日のいずれかが期限内のものを保持
         filtered_articles = []
         for article in articles:
+            # タイムゾーン情報がない場合はUTCとして扱う
+            published = article.published
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+            
+            read_at = article.read_at
+            if read_at and read_at.tzinfo is None:
+                read_at = read_at.replace(tzinfo=timezone.utc)
+            
             # 公開日が期限内、または読み取り日が期限内の場合は保持
             keep_article = (
-                article.published >= cutoff_date or
-                (article.read_at and article.read_at >= cutoff_date)
+                published >= cutoff_date or
+                (read_at and read_at >= cutoff_date)
             )
             if keep_article:
                 filtered_articles.append(article)
@@ -164,7 +183,7 @@ class DataStorage:
     def cleanup_old_read_records(self, days: int):
         """指定日数より古い読み取り記録のみを削除（未処理記事は保持）"""
         articles = self.load_articles()
-        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         filtered_articles = []
         for article in articles:
@@ -175,10 +194,16 @@ class DataStorage:
                 should_keep = True
             # 処理済み記事は読み取り日時または公開日時で判定
             elif article.read_at:
-                should_keep = article.read_at >= cutoff_date
+                read_at = article.read_at
+                if read_at.tzinfo is None:
+                    read_at = read_at.replace(tzinfo=timezone.utc)
+                should_keep = read_at >= cutoff_date
             else:
                 # read_atがない場合は公開日で判定（フォールバック）
-                should_keep = article.published >= cutoff_date
+                published = article.published
+                if published.tzinfo is None:
+                    published = published.replace(tzinfo=timezone.utc)
+                should_keep = published >= cutoff_date
             
             if should_keep:
                 filtered_articles.append(article)

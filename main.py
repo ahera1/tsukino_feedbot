@@ -60,7 +60,7 @@ def setup_logging():
         logs_dir.mkdir(exist_ok=True)
         
         # ログファイル名（日付付き）
-        log_filename = f"feedbot_{datetime.now().strftime('%Y%m%d')}.log"
+        log_filename = f"feedbot_{datetime.now(timezone.utc).strftime('%Y%m%d')}.log"
         log_filepath = logs_dir / log_filename
         
         # ファイルハンドラーの作成
@@ -102,6 +102,7 @@ class FeedBot:
         if not config.ENABLE_QUIET_HOURS:
             return False
         
+        # ローカル時間で判定（設定された時間帯はローカル時間ベース）
         now = datetime.now()
         current_hour = now.hour
         start = config.QUIET_HOURS_START
@@ -172,7 +173,7 @@ class FeedBot:
     
     def check_feeds(self):
         """フィードをチェックして新着記事を処理"""
-        print(f"フィードチェック開始: {datetime.now()}")
+        print(f"フィードチェック開始: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
         self.logger.info("フィードチェック開始")
         
         # 投稿禁止時間帯チェック
@@ -232,7 +233,7 @@ class FeedBot:
                 self.logger.info(f"新着記事発見: {item.title}")
             
             # フィードソースの最終チェック時刻を更新
-            source.last_checked = datetime.now()
+            source.last_checked = datetime.now(timezone.utc)
         
         # フィードソースの保存
         self.storage.save_feed_sources(feed_sources)
@@ -244,7 +245,7 @@ class FeedBot:
         if new_articles:
             # まず新着記事を全て保存（AI処理の成否に関わらず既読管理のため）
             for article in new_articles:
-                article.read_at = datetime.now()  # 読み取り日時を設定
+                article.read_at = datetime.now(timezone.utc)  # 読み取り日時を設定
             
             # 記事をいったん保存（既読管理のため）
             all_articles = existing_articles + new_articles
@@ -285,7 +286,7 @@ class FeedBot:
             
             # 記事処理開始時に読み取り日時を設定（既に設定済みだが念のため）
             if not article.read_at:
-                article.read_at = datetime.now()
+                article.read_at = datetime.now(timezone.utc)
             
             # AI要約の生成
             try:
@@ -383,7 +384,7 @@ class FeedBot:
         sources = self.storage.load_feed_sources()
         
         # 日付別の統計
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         today_articles = [a for a in articles if a.read_at and a.read_at.date() == now.date()]
         week_articles = [a for a in articles if a.read_at and a.read_at >= now - timedelta(days=7)]
         
