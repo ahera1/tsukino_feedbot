@@ -11,45 +11,13 @@ class OpenAIService(AIServiceBase):
     def __init__(self, config: AIConfig):
         super().__init__(config)
         self.base_url = config.base_url or "https://api.openai.com/v1/chat/completions"
-    
-    def _extract_final_response(self, content: str) -> str:
-        """thinking部分を除去して最終的な要約のみを抽出"""
-        # assistantfinalマーカーがある場合はその後の内容を取得
-        if "assistantfinal" in content:
-            parts = content.split("assistantfinal", 1)
-            if len(parts) > 1:
-                final_content = parts[1].strip()
-                logger.debug(f"{self.name}: assistantfinalマーカーで最終内容を抽出しました")
-                return final_content
-        
-        # analysisから始まる場合のパターンマッチング
-        if content.startswith("analysis"):
-            # 日本語の段落を探す
-            import re
-            lines = content.split('\n')
-            japanese_pattern = re.compile(r'[ひらがなカタカナ漢字一-龯あ-ん ア-ヶー]')
-            
-            for line in reversed(lines):
-                line = line.strip()
-                if (line and 
-                    len(line) > 30 and
-                    japanese_pattern.search(line) and
-                    not line.startswith(("analysis", "We need", "Let's", "Count", "=", '"')) and
-                    not line.endswith(('?"', '"'))):
-                    logger.debug(f"{self.name}: analysis部分から日本語要約を抽出しました")
-                    return line
-        
-        # マーカーが見つからない場合はそのまま返す
-        return content
         
     def generate_summary(self, title: str, content: str, prompt_template: str) -> str:
         """OpenAI APIで要約生成"""
         if not self.config.api_key:
             raise ValueError(f"{self.name}: APIキーが設定されていません")
             
-        # プロンプトに明確な出力指示を追加
-        base_prompt = prompt_template.format(title=title, content=content)
-        prompt = f"{base_prompt}\n\n直接的な要約のみを出力してください。thinking過程や分析は含めないでください。"
+        prompt = prompt_template.format(title=title, content=content)
         
         headers = {
             "Authorization": f"Bearer {self.config.api_key}",
@@ -95,11 +63,7 @@ class OpenAIService(AIServiceBase):
                         logger.error(f"{self.name}: トークン制限に達しました")
                         print(f"🚫 {self.name}: トークン制限達成 - {usage_info['total_tokens']}/{self.config.max_tokens}")
                 
-                content = result["choices"][0]["message"]["content"].strip()
-                
-                # thinking部分を除去
-                summary = self._extract_final_response(content)
-                
+                summary = result["choices"][0]["message"]["content"].strip()
                 logger.debug(f"{self.name}: 要約生成成功 (文字数: {len(summary)})")
                 return summary
             else:
