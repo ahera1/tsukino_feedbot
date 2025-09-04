@@ -38,10 +38,6 @@ class MastodonService:
             visibility = "direct"
         
         try:
-            # 文字数制限チェック（Mastodonは通常500文字）
-            if len(content) > 500:
-                content = content[:497] + "..."
-            
             # バージョンによってメソッド名が異なる場合に対応
             if hasattr(self.mastodon, 'status_post'):
                 result = self.mastodon.status_post(content, visibility=visibility)
