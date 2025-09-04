@@ -435,7 +435,8 @@ def main():
         'MASTODON_INSTANCE_URL', 
         'MASTODON_ACCESS_TOKEN',
         'CHECK_INTERVAL_MINUTES',
-        'ARTICLE_RETENTION_DAYS'
+        'ARTICLE_RETENTION_DAYS',
+        'READ_RECORD_RETENTION_DAYS'
     ]
     
     missing_vars = []
