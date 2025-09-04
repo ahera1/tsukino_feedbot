@@ -17,8 +17,6 @@ class OpenRouterService(AIServiceBase):
         if not self.config.api_key:
             raise ValueError(f"{self.name}: APIキーが設定されていません")
             
-        prompt = prompt_template.format(title=title, content=content)
-        
         headers = {
             "Authorization": f"Bearer {self.config.api_key}",
             "Content-Type": "application/json",
@@ -26,11 +24,27 @@ class OpenRouterService(AIServiceBase):
             "X-Title": "Tsukino Feedbot"
         }
         
+        # メッセージ配列を構築
+        messages = []
+        
+        # システムプロンプトを設定から取得
+        system_prompt = self.config.extra_params.get("system_prompt")
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+            logger.debug(f"{self.name}: システムプロンプトを使用")
+        
+        # ユーザープロンプト
+        user_prompt = prompt_template.format(title=title, content=content)
+        messages.append({"role": "user", "content": user_prompt})
+        
+        # extra_paramsからsystem_promptを除外してdataに追加
+        extra_params = {k: v for k, v in self.config.extra_params.items() if k != "system_prompt"}
+        
         data = {
             "model": self.config.model or "google/gemini-2.0-flash-thinking-exp-1219:free",
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "stream": False,
-            **self.config.extra_params
+            **extra_params
         }
         
         # max_tokensとtemperatureがNoneでない場合のみ追加

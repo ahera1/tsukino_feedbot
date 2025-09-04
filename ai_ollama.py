@@ -14,14 +14,28 @@ class OllamaService(AIServiceBase):
         
     def generate_summary(self, title: str, content: str, prompt_template: str) -> str:
         """Ollama APIで要約生成"""
-        prompt = prompt_template.format(title=title, content=content)
+        # メッセージ配列を構築
+        messages = []
+        
+        # システムプロンプトを設定から取得
+        system_prompt = self.config.extra_params.get("system_prompt")
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+            logger.debug(f"{self.name}: システムプロンプトを使用")
+        
+        # ユーザープロンプト
+        user_prompt = prompt_template.format(title=title, content=content)
+        messages.append({"role": "user", "content": user_prompt})
+        
+        # extra_paramsからsystem_promptを除外してoptionsに追加
+        extra_params = {k: v for k, v in self.config.extra_params.items() if k != "system_prompt"}
         
         data = {
             "model": self.config.model or "llama2",
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "stream": False,
             "options": {
-                **self.config.extra_params
+                **extra_params
             }
         }
         

@@ -40,6 +40,27 @@ def get_optional_float(env_var: str, default: str = None) -> float:
     except ValueError:
         return None
 
+# AI統合プロンプト設定
+# システムプロンプト（AI全体で統一使用）
+AI_SYSTEM_PROMPT_TEMPLATE = os.getenv(
+    "AI_SYSTEM_PROMPT_TEMPLATE",
+    "あなたは技術ニュースを要約する専門家です。以下のルールに従って要約を作成してください：\n"
+    "- 140文字以内で簡潔にまとめる\n"
+    "- 重要な技術的ポイントを優先する\n"
+    "- 専門用語は適切に使用する\n"
+    "- 客観的で事実ベースの内容にする\n"
+    "- 絵文字は使用しない"
+).replace("\\n", "\n")
+
+# ユーザープロンプトテンプレート（記事本文と最小限の指示）
+AI_USER_PROMPT_TEMPLATE = os.getenv(
+    "AI_USER_PROMPT_TEMPLATE", 
+    "以下の記事を要約してください：\n\nタイトル: {title}\n内容: {content}"
+).replace("\\n", "\n")
+
+# 後方互換性のため SUMMARY_PROMPT も維持
+SUMMARY_PROMPT = AI_USER_PROMPT_TEMPLATE
+
 # AI API設定（優先順位順）
 AI_CONFIGS = [
     {
@@ -51,6 +72,9 @@ AI_CONFIGS = [
         "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
+        "extra_params": {
+            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
+        }
     },
     {
         "name": "OpenAI",
@@ -61,6 +85,9 @@ AI_CONFIGS = [
         "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
+        "extra_params": {
+            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
+        }
     },
     {
         "name": "Ollama",
@@ -71,6 +98,9 @@ AI_CONFIGS = [
         "timeout": int(os.getenv("AI_TIMEOUT", "180")),  # Ollamaはさらに長めに調整
         "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
         "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
+        "extra_params": {
+            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
+        }
     }
 ]
 
@@ -88,8 +118,26 @@ ENABLE_QUIET_HOURS = os.getenv("ENABLE_QUIET_HOURS", "false").lower() == "true"
 QUIET_HOURS_START = int(os.getenv("QUIET_HOURS_START", "23"))
 QUIET_HOURS_END = int(os.getenv("QUIET_HOURS_END", "7"))
 
-# AI要約プロンプト
-SUMMARY_PROMPT = os.getenv("SUMMARY_PROMPT").replace("\\n", "\n")
+# AI統合プロンプト設定
+# システムプロンプト（AI全体で統一使用）
+AI_SYSTEM_PROMPT_TEMPLATE = os.getenv(
+    "AI_SYSTEM_PROMPT_TEMPLATE",
+    "あなたは技術ニュースを要約する専門家です。以下のルールに従って要約を作成してください：\n"
+    "- 140文字以内で簡潔にまとめる\n"
+    "- 重要な技術的ポイントを優先する\n"
+    "- 専門用語は適切に使用する\n"
+    "- 客観的で事実ベースの内容にする\n"
+    "- 絵文字は使用しない"
+).replace("\\n", "\n")
+
+# ユーザープロンプトテンプレート（記事本文と最小限の指示）
+AI_USER_PROMPT_TEMPLATE = os.getenv(
+    "AI_USER_PROMPT_TEMPLATE", 
+    "以下の記事を要約してください：\n\nタイトル: {title}\n内容: {content}"
+).replace("\\n", "\n")
+
+# 後方互換性のため SUMMARY_PROMPT も維持
+SUMMARY_PROMPT = AI_USER_PROMPT_TEMPLATE
 
 # Mastodon投稿設定
 POST_TEMPLATE = os.getenv("POST_TEMPLATE", "").replace("\\n", "\n")

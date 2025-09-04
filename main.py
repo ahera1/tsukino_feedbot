@@ -293,7 +293,7 @@ class FeedBot:
                 summary = self.ai_service.generate_summary(
                     article.title,
                     article.content,
-                    config.SUMMARY_PROMPT
+                    config.AI_USER_PROMPT_TEMPLATE
                 )
                 self.logger.info(f"AI要約生成完了: {article.title} (ID: {article.id})")
                 self.logger.debug(f"要約内容: {summary}")
