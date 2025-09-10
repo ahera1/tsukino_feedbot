@@ -146,5 +146,5 @@ class FeedReader:
         if hasattr(entry, 'description') and entry.description and entry.description.strip():
             return entry.description
         
-        # 4. フォールバック: タイトルのみ
-        return getattr(entry, 'title', 'タイトルなし')
+        # 4. 本文データが取得できない場合は空文字列を返す（フォールバックしない）
+        return ""
