@@ -4,7 +4,9 @@ Tsukino Feedbot - AIを活用したフィード要約・Mastodon投稿ボット
 """
 
 import os
+import sys
 import time
+import signal
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -94,8 +96,22 @@ class FeedBot:
             config.MASTODON_ACCESS_TOKEN
         )
         
+        # 中断フラグ（シグナル受信時に設定）
+        self.shutdown_requested = False
+        
         # 初回起動時にフィードソースを設定から読み込み
         self._initialize_feed_sources()
+        
+        # シグナルハンドラーの設定
+        signal.signal(signal.SIGTERM, self._handle_shutdown_signal)
+        signal.signal(signal.SIGINT, self._handle_shutdown_signal)
+    
+    def _handle_shutdown_signal(self, signum, frame):
+        """シャットダウンシグナルを受信したときの処理"""
+        signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        print(f"\n{signal_name}を受信しました。安全に停止します...")
+        self.logger.warning(f"{signal_name}を受信。処理中の記事を完了後に停止します")
+        self.shutdown_requested = True
     
     def _is_quiet_hours(self) -> bool:
         """現在が投稿禁止時間帯かどうかを判定"""
@@ -241,25 +257,48 @@ class FeedBot:
         print(f"{len(new_articles)}件の新着記事を発見")
         self.logger.info(f"{len(new_articles)}件の新着記事を発見")
         
-        # 新着記事の処理とデータ保存を改善
+        # 新着記事を1件ずつ処理して都度保存（中断時の既読化問題を回避）
         if new_articles:
-            # まず新着記事を全て保存（AI処理の成否に関わらず既読管理のため）
-            for article in new_articles:
-                article.read_at = datetime.now(timezone.utc)  # 読み取り日時を設定
+            print(f"{len(new_articles)}件の新着記事を順次処理します")
+            self.logger.info(f"{len(new_articles)}件の新着記事を順次処理開始")
             
-            # 記事をいったん保存（既読管理のため）
-            all_articles = existing_articles + new_articles
-            self.storage.save_articles(all_articles)
-            print(f"新着記事{len(new_articles)}件を保存しました（AI処理前）")
-            self.logger.info(f"新着記事{len(new_articles)}件を保存完了（AI処理前）")
-            
-            # AI要約とMastodon投稿の処理
-            self._process_new_articles(new_articles)
-            
-            # 処理後の記事を再保存（AI処理結果を反映）
-            self.storage.save_articles(all_articles)
-            print(f"AI処理結果を反映して記事を再保存しました")
-            self.logger.info("AI処理結果を反映して記事を再保存完了")
+            for i, article in enumerate(new_articles, 1):
+                # 中断要求チェック（次の記事処理前）
+                if self.shutdown_requested:
+                    remaining = len(new_articles) - i + 1
+                    print(f"\n中断要求により処理を停止します。残り{remaining}件の記事は次回処理されます。")
+                    self.logger.warning(f"中断要求により停止。残り{remaining}件は未処理")
+                    break
+                
+                # 処理直前に read_at を設定（この記事だけを既読化）
+                article.read_at = datetime.now(timezone.utc)
+                
+                # 既存記事に追加して保存（この記事だけ既読化）
+                existing_articles.append(article)
+                self.storage.save_articles(existing_articles)
+                print(f"記事 {i}/{len(new_articles)} を保存しました: {article.title[:50]}...")
+                self.logger.info(f"記事保存完了 ({i}/{len(new_articles)}): {article.title}")
+                
+                # AI処理とMastodon投稿（待機なし）
+                self._process_single_article(article, i, len(new_articles), wait=False)
+                
+                # 処理結果を反映して再保存
+                self.storage.save_articles(existing_articles)
+                self.logger.info(f"AI処理結果を反映して再保存 ({i}/{len(new_articles)}): {article.title}")
+                
+                # 次の記事処理前の待機（最後の記事以外、ループ制御下で実行）
+                if i < len(new_articles):
+                    wait_time = getattr(config, 'POST_WAIT', 60)
+                    print(f"次の記事処理まで{wait_time}秒待機...")
+                    self.logger.debug(f"次の記事処理まで{wait_time}秒待機")
+                    
+                    # 待機を1秒ごとに分割して中断チェック
+                    for _ in range(wait_time):
+                        if self.shutdown_requested:
+                            print("\n待機中に中断要求を受信しました。")
+                            self.logger.warning("待機中に中断要求を受信")
+                            break
+                        time.sleep(1)
         
         # 古い記事のクリーンアップ（通常のクリーンアップ）
         cleaned_count = self.storage.cleanup_old_articles(config.ARTICLE_RETENTION_DAYS)
@@ -275,71 +314,61 @@ class FeedBot:
         print("フィードチェック完了")
         self.logger.info("フィードチェック完了")
     
-    def _process_new_articles(self, articles: List[FeedItem]):
-        """新着記事を処理（要約生成とMastodon投稿）"""
-        total_articles = len(articles)
-        self.logger.info(f"新着記事の処理開始: {total_articles}件")
+    def _process_single_article(self, article: FeedItem, current: int, total: int, wait: bool = True):
+        """1件の記事を処理（要約生成とMastodon投稿）"""
+        print(f"記事処理中 ({current}/{total}): {article.title}")
+        self.logger.info(f"記事処理開始 ({current}/{total}): {article.title}")
         
-        for i, article in enumerate(articles, 1):
-            print(f"記事処理中 ({i}/{total_articles}): {article.title}")
-            self.logger.info(f"記事処理開始 ({i}/{total_articles}): {article.title}")
+        # AI要約の生成
+        try:
+            summary = self.ai_service.generate_summary(
+                article.title,
+                article.content,
+                config.AI_USER_PROMPT_TEMPLATE
+            )
+            self.logger.info(f"AI要約生成完了: {article.title} (ID: {article.id})")
+            self.logger.debug(f"要約内容: {summary}")
+        except Exception as e:
+            error_msg = f"AI要約生成エラー ({current}/{total}): {article.title} - {str(e)}"
+            print(error_msg)
+            self.logger.error(f"AI要約生成エラー: {article.title} (ID: {article.id}) - {str(e)}", exc_info=True)
+            summary = None
+        
+        if summary:
+            article.summary = summary
+            article.processed = True
             
-            # 記事処理開始時に読み取り日時を設定（既に設定済みだが念のため）
-            if not article.read_at:
-                article.read_at = datetime.now(timezone.utc)
+            # Mastodon投稿の準備
+            post_content = config.POST_TEMPLATE.format(
+                summary=summary,
+                title=article.title,
+                url=article.url
+            )
             
-            # AI要約の生成
-            try:
-                summary = self.ai_service.generate_summary(
-                    article.title,
-                    article.content,
-                    config.AI_USER_PROMPT_TEMPLATE
-                )
-                self.logger.info(f"AI要約生成完了: {article.title} (ID: {article.id})")
-                self.logger.debug(f"要約内容: {summary}")
-            except Exception as e:
-                error_msg = f"AI要約生成エラー ({i}/{total_articles}): {article.title} - {str(e)}"
-                print(error_msg)
-                self.logger.error(f"AI要約生成エラー: {article.title} (ID: {article.id}) - {str(e)}", exc_info=True)
-                summary = None
+            self.logger.debug(f"Mastodon投稿内容: {post_content}")
             
-            if summary:
-                article.summary = summary
-                article.processed = True
-                
-                # Mastodon投稿の準備
-                post_content = config.POST_TEMPLATE.format(
-                    summary=summary,
-                    title=article.title,
-                    url=article.url
-                )
-                
-                self.logger.debug(f"Mastodon投稿内容: {post_content}")
-                
-                # Mastodonに投稿
-                if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
-                    article.posted_to_mastodon = True
-                    success_msg = f"投稿完了 ({i}/{total_articles}): {article.title}"
-                    print(success_msg)
-                    self.logger.info(f"Mastodon投稿完了: {article.title} (ID: {article.id})")
-                else:
-                    failure_msg = f"投稿失敗 ({i}/{total_articles}): {article.title}"
-                    print(failure_msg)
-                    self.logger.warning(f"Mastodon投稿失敗: {article.title} (ID: {article.id})")
-                    article.processed = True  # 要約は成功したので処理済みとマーク
+            # Mastodonに投稿
+            if self.mastodon_service.post_toot(post_content, config.POST_VISIBILITY):
+                article.posted_to_mastodon = True
+                success_msg = f"投稿完了 ({current}/{total}): {article.title}"
+                print(success_msg)
+                self.logger.info(f"Mastodon投稿完了: {article.title} (ID: {article.id})")
             else:
-                failure_msg = f"要約生成失敗 ({i}/{total_articles}): {article.title} - 記事は保存されましたが要約されていません"
+                failure_msg = f"投稿失敗 ({current}/{total}): {article.title}"
                 print(failure_msg)
-                self.logger.warning(f"要約生成失敗による記事スキップ: {article.title} (ID: {article.id})")
-            
-            # 投稿処理間の待機（最後の記事以外）
-            if i < total_articles:
-                wait_time = getattr(config, 'POST_WAIT', 60)
-                print(f"次の記事処理まで{wait_time}秒待機...")
-                self.logger.debug(f"次の記事処理まで{wait_time}秒待機")
-                time.sleep(wait_time)
+                self.logger.warning(f"Mastodon投稿失敗: {article.title} (ID: {article.id})")
+                article.processed = True  # 要約は成功したので処理済みとマーク
+        else:
+            failure_msg = f"要約生成失敗 ({current}/{total}): {article.title} - 記事は保存されましたが要約されていません"
+            print(failure_msg)
+            self.logger.warning(f"要約生成失敗による記事スキップ: {article.title} (ID: {article.id})")
         
-        self.logger.info(f"新着記事の処理完了: {total_articles}件")
+        # 待機処理は呼び出し側で制御（wait=Falseの場合はスキップ）
+        if wait and current < total:
+            wait_time = getattr(config, 'POST_WAIT', 60)
+            print(f"次の記事処理まで{wait_time}秒待機...")
+            self.logger.debug(f"次の記事処理まで{wait_time}秒待機")
+            time.sleep(wait_time)
     
     def run_once(self):
         """一回だけフィードチェックを実行"""
