@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
 
-  # 継続実行専用サービス（デーモンモード）
-  tsukino-feedbot-daemon:
+  # デフォルトサービス（デーモンモード）
+  feedbot:
     build: .
-    container_name: tsukino-feedbot-daemon
+    container_name: tsukino-feedbot
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -15,18 +15,9 @@ services:
       - TZ=Asia/Tokyo
       - RUN_MODE=daemon
     restart: unless-stopped
-    profiles:
-      - daemon
-    
-    # ヘルスチェック（データファイルの存在確認）
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-  # ワンショット実行用サービス
-  tsukino-feedbot-once:
+
+  # ワンショット実行用（必要時のみ）
+  feedbot-once:
     build: .
     container_name: tsukino-feedbot-once
     volumes:
@@ -39,17 +30,9 @@ services:
       - RUN_MODE=once
     profiles:
       - once
-    
-    # ヘルスチェック（データファイルの存在確認）
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
-  # ステータス確認用サービス
-  tsukino-feedbot-status:
+  # ステータス確認用（必要時のみ）
+  feedbot-status:
     build: .
     container_name: tsukino-feedbot-status
     volumes:
@@ -62,34 +45,3 @@ services:
       - RUN_MODE=status
     profiles:
       - status
-    
-    # ヘルスチェック（データファイルの存在確認）
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # クリーンアップ用サービス
-  tsukino-feedbot-cleanup:
-    build: .
-    container_name: tsukino-feedbot-cleanup
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    environment:
-      - TZ=Asia/Tokyo
-      - RUN_MODE=cleanup
-    profiles:
-      - cleanup
-    
-    # ヘルスチェック（データファイルの存在確認）
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/data/articles.json && test -f /app/data/feeds.json"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s

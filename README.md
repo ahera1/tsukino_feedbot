@@ -27,24 +27,29 @@ copy feeds.example.json feeds.json
 
 4. 実行:
 
-**デーモンモード（バックグラウンド自動実行）:**
+**デーモンモード（常時稼働 - デフォルト）:**
 ```bash
-docker-compose --profile daemon up -d --build
+docker-compose up -d --build
 ```
 
 **ワンショット実行（一回だけチェック）:**
 ```bash
-docker-compose --profile once up --build
+docker-compose run --rm feedbot-once
 ```
 
 **ステータス確認:**
 ```bash
-docker-compose --profile status up --build
+docker-compose run --rm feedbot-status
 ```
 
-**データクリーンアップ:**
+**停止:**
 ```bash
-docker-compose --profile cleanup up --build
+docker-compose down
+```
+
+**ログ確認:**
+```bash
+docker-compose logs -f
 ```
 
 ## 機能
@@ -78,33 +83,50 @@ docker-compose --profile cleanup up --build
 
 ## Docker実行モード
 
-- **インタラクティブモード**: メニュー操作で手動実行
-  ```bash
-  docker-compose up --build
-  ```
+### 常時稼働（デフォルト）
+```bash
+# バックグラウンドで起動
+docker-compose up -d --build
 
-- **デーモンモード**: バックグラウンドで自動継続実行
-  ```bash
-  docker-compose --profile daemon up -d --build
-  # ログ確認: docker-compose logs -f tsukino-feedbot-daemon
-  # 停止: docker-compose --profile daemon down
-  ```
+# ログ確認
+docker-compose logs -f
 
-- **ワンショット実行**: 一回だけフィードをチェック
-  ```bash
-  docker-compose --profile once up --build
-  ```
+# 停止
+docker-compose down
+```
 
-- **ステータス確認**: 現在の状況を表示
-  ```bash
-  docker-compose --profile status up --build
-  ```
+### メンテナンスコマンド
 
-- **データクリーンアップ**: 古いデータを削除
-  ```bash
-  docker-compose --profile cleanup up --build
-  ```
+**ワンショット実行**（一回だけフィードをチェック）:
+```bash
+docker-compose run --rm feedbot-once
+```
 
-### インタラクティブモードで入力ができない場合
+**ステータス確認**（現在の状況を表示）:
+```bash
+docker-compose run --rm feedbot-status
+```
 
-Docker環境では`input()`が正常に動作しない場合があります。その場合は上記のプロファイル指定での実行をご利用ください。
+**データクリーンアップ**（デーモン内で自動実行されるため、通常は不要）:
+- 古い記事は自動的にクリーンアップされます
+- 記事保持期間: `ARTICLE_RETENTION_DAYS`（デフォルト7日）
+- 読み取り記録保持期間: `READ_RECORD_RETENTION_DAYS`（デフォルト3日）
+
+### ローカル実行（開発・テスト用）
+
+インタラクティブメニューでの実行:
+```bash
+python main.py
+```
+
+環境変数で実行モードを指定:
+```bash
+# ワンショット実行
+$env:RUN_MODE="once"; python main.py
+
+# デーモンモード
+$env:RUN_MODE="daemon"; python main.py
+
+# ステータス確認
+$env:RUN_MODE="status"; python main.py
+```
