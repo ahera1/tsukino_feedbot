@@ -1,9 +1,10 @@
 import feedparser
+import requests
 from datetime import datetime, timedelta, timezone
 from typing import List
 from models import FeedItem, FeedSource
 import hashlib
-from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH, FEED_INITIAL_DELAY_MINUTES
+from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH, FEED_INITIAL_DELAY_MINUTES, FEED_FETCH_TIMEOUT
 
 
 class FeedReader:
@@ -50,7 +51,8 @@ class FeedReader:
     def fetch_feed_items(self, feed_source: FeedSource) -> List[FeedItem]:
         """指定されたフィードから記事を取得"""
         try:
-            feed = feedparser.parse(feed_source.url)
+            response = requests.get(feed_source.url, timeout=FEED_FETCH_TIMEOUT)
+            feed = feedparser.parse(response.content)
             
             if feed.bozo:
                 print(f"フィード解析警告 ({feed_source.name}): {feed.bozo_exception}")

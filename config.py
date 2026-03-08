@@ -132,6 +132,9 @@ MIN_CONTENT_LENGTH = int(os.getenv("MIN_CONTENT_LENGTH", "10"))  # 最小本文�
 # 記事遅延処理設定
 FEED_INITIAL_DELAY_MINUTES = int(os.getenv("FEED_INITIAL_DELAY_MINUTES", "5"))  # 新着記事の初期遅延時間（分）
 
+# フィード取得タイムアウト設定
+FEED_FETCH_TIMEOUT = int(os.getenv("FEED_FETCH_TIMEOUT", "30"))  # フィード取得のHTTPタイムアウト（秒）
+
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
