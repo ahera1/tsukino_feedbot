@@ -29,7 +29,7 @@ class AIService:
         try:
             return self.manager.generate_summary(title, content, prompt_template)
         except Exception as e:
-            print(f"要約生成エラー: {e}")
+            logger.error(f"要約生成エラー: {e}")
             return None
 
 def create_ai_service_manager(ai_configs: list) -> AIServiceManager:

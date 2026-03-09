@@ -34,7 +34,13 @@ flowchart TD
     AppendArticle --> SaveFirst[記事を保存<br/>既読化完了]
     SaveFirst --> ProcessAI[AI要約生成]
     
-    ProcessAI --> PostMastodon[Mastodon投稿]
+    ProcessAI --> AIFallback{AIフォールバック}
+    AIFallback -->|成功| PostMastodon[Mastodon投稿]
+    AIFallback -->|エラー<br/>429/403/404/timeout等| TryNext[次のAIサービスでリトライ]
+    TryNext --> AIFallback
+    AIFallback -->|全サービス失敗| LogFailure[エラーログ出力<br/>フォールバック経緯記録]
+    LogFailure --> SaveSecond
+    
     PostMastodon --> SaveSecond[処理結果を再保存]
     SaveSecond --> CheckLast{最後の記事?}
     

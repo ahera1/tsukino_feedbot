@@ -81,6 +81,11 @@ docker-compose logs -f
   - `QUIET_HOURS_END`: 投稿禁止終了時刻（24時間形式）
 - **ウェイト設定**: 連続投稿を防ぐための待機時間
   - `POST_WAIT`: 投稿処理間の待機時間（秒、デフォルト: 60秒）
+- **ログ設定**: コンソール(docker logs)とファイルで異なるレベルを設定可能
+  - `LOG_LEVEL`: コンソールログレベル（デフォルト: INFO）
+  - `LOG_TO_FILE`: ファイルログの有効/無効（デフォルト: true）
+  - `LOG_FILE_LEVEL`: ファイルログレベル（デフォルト: DEBUG）
+  - `LOG_FILE_RETENTION_DAYS`: ログファイル保持日数（デフォルト: 14日）
 
 ## Docker実行モード
 

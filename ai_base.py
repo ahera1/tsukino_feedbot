@@ -7,6 +7,45 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+
+class AIServiceError(Exception):
+    """AI APIサービスのエラー（フォールバック理由の記録用）"""
+
+    RATE_LIMIT = "rate_limit"
+    AUTH_ERROR = "auth_error"
+    MODEL_NOT_FOUND = "model_not_found"
+    CREDIT_EXHAUSTED = "credit_exhausted"
+    SERVER_ERROR = "server_error"
+    TIMEOUT = "timeout"
+    CONNECTION_ERROR = "connection_error"
+    TOKEN_ERROR = "token_error"
+    UNKNOWN = "unknown"
+
+    CATEGORY_LABELS = {
+        "rate_limit": "レート制限",
+        "auth_error": "認証エラー",
+        "model_not_found": "モデル未検出",
+        "credit_exhausted": "クレジット不足",
+        "server_error": "サーバーエラー",
+        "timeout": "タイムアウト",
+        "connection_error": "接続エラー",
+        "token_error": "トークンエラー",
+        "unknown": "不明なエラー",
+    }
+
+    def __init__(self, message: str, service_name: str = "", error_category: str = "unknown",
+                 status_code: int = None, response_body: dict = None):
+        self.service_name = service_name
+        self.error_category = error_category
+        self.status_code = status_code
+        self.response_body = response_body
+        super().__init__(message)
+
+    @property
+    def category_label(self) -> str:
+        return self.CATEGORY_LABELS.get(self.error_category, "不明なエラー")
+
+
 @dataclass
 class AIConfig:
     """AI APIの設定"""
@@ -39,7 +78,6 @@ class AIServiceBase(ABC):
     
     def _make_request_with_retry(self, method: str, url: str, **kwargs) -> requests.Response:
         """リトライ機能付きHTTPリクエスト"""
-        # タイムアウト設定
         kwargs.setdefault('timeout', self.config.timeout)
         
         last_exception = None
@@ -52,33 +90,81 @@ class AIServiceBase(ABC):
                 
             except requests.exceptions.Timeout as e:
                 last_exception = e
-                logger.warning(f"{self.name}: タイムアウト発生 (試行 {attempt + 1}/{self.config.max_retries}) - {str(e)}")
+                logger.warning(f"{self.name}: タイムアウト (試行 {attempt + 1}/{self.config.max_retries})")
                 
             except requests.exceptions.HTTPError as e:
-                # HTTPエラーの場合、リトライするかどうか判断
-                if e.response.status_code in [408, 429, 500, 502, 503, 504]:
+                status_code = e.response.status_code if e.response is not None else None
+                if status_code in [408, 429, 500, 502, 503, 504]:
                     last_exception = e
-                    logger.warning(f"{self.name}: リトライ可能なHTTPエラー (試行 {attempt + 1}/{self.config.max_retries}) - {e.response.status_code}")
+                    logger.warning(f"{self.name}: HTTPエラー {status_code} (試行 {attempt + 1}/{self.config.max_retries})")
                 else:
-                    # 認証エラーなどはリトライしない
-                    raise e
+                    raise self._classify_http_error(e)
                     
             except requests.exceptions.ConnectionError as e:
                 last_exception = e
-                logger.warning(f"{self.name}: 接続エラー (試行 {attempt + 1}/{self.config.max_retries}) - {str(e)}")
+                logger.warning(f"{self.name}: 接続エラー (試行 {attempt + 1}/{self.config.max_retries})")
+                
+            except AIServiceError:
+                raise
                 
             except Exception as e:
-                # その他の例外はリトライしない
                 raise e
             
-            # 最後の試行でなければ待機
             if attempt < self.config.max_retries - 1:
-                wait_time = self.config.retry_delay * (2 ** attempt)  # 指数バックオフ
+                wait_time = self.config.retry_delay * (2 ** attempt)
                 logger.info(f"{self.name}: {wait_time}秒後にリトライします...")
                 time.sleep(wait_time)
         
-        # 全ての試行が失敗した場合
-        raise last_exception
+        raise self._classify_last_error(last_exception)
+    
+    def _classify_http_error(self, error: requests.exceptions.HTTPError) -> AIServiceError:
+        """HTTPエラーをAIServiceErrorに分類"""
+        status_code = error.response.status_code if error.response is not None else None
+        response_body = None
+        try:
+            if error.response is not None:
+                response_body = error.response.json()
+        except (ValueError, AttributeError):
+            pass
+        
+        category = AIServiceError.UNKNOWN
+        if status_code == 429:
+            category = AIServiceError.RATE_LIMIT
+        elif status_code in (401, 403):
+            category = AIServiceError.AUTH_ERROR
+        elif status_code == 404:
+            category = AIServiceError.MODEL_NOT_FOUND
+        elif status_code == 402:
+            category = AIServiceError.CREDIT_EXHAUSTED
+        elif status_code and 500 <= status_code < 600:
+            category = AIServiceError.SERVER_ERROR
+        
+        label = AIServiceError.CATEGORY_LABELS.get(category, "不明なエラー")
+        return AIServiceError(
+            f"{self.name}: {label} (HTTP {status_code})",
+            service_name=self.name,
+            error_category=category,
+            status_code=status_code,
+            response_body=response_body
+        )
+    
+    def _classify_last_error(self, error: Exception) -> AIServiceError:
+        """リトライ後の最終エラーをAIServiceErrorに分類"""
+        if isinstance(error, AIServiceError):
+            return error
+        if isinstance(error, requests.exceptions.Timeout):
+            return AIServiceError(
+                f"{self.name}: タイムアウト (全{self.config.max_retries}回リトライ失敗)",
+                service_name=self.name, error_category=AIServiceError.TIMEOUT)
+        if isinstance(error, requests.exceptions.HTTPError):
+            return self._classify_http_error(error)
+        if isinstance(error, requests.exceptions.ConnectionError):
+            return AIServiceError(
+                f"{self.name}: 接続エラー (全{self.config.max_retries}回リトライ失敗)",
+                service_name=self.name, error_category=AIServiceError.CONNECTION_ERROR)
+        return AIServiceError(
+            f"{self.name}: {str(error)}",
+            service_name=self.name, error_category=AIServiceError.UNKNOWN)
     
     def _analyze_response_usage(self, response_data: dict) -> dict:
         """レスポンスからトークン使用量を分析"""

@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 from models import FeedItem, FeedSource
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataStorage:
@@ -47,7 +50,7 @@ class DataStorage:
                 ))
             return sources
         except Exception as e:
-            print(f"フィードソース読み込みエラー: {e}")
+            logger.error(f"フィードソース読み込みエラー: {e}")
             return []
     
     def save_feed_sources(self, sources: List[FeedSource]):
@@ -67,7 +70,7 @@ class DataStorage:
             with open(self.feeds_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"フィードソース保存エラー: {e}")
+            logger.error(f"フィードソース保存エラー: {e}")
     
     def load_articles(self) -> List[FeedItem]:
         """記事一覧を読み込む"""
@@ -106,7 +109,7 @@ class DataStorage:
                 ))
             return articles
         except Exception as e:
-            print(f"記事読み込みエラー: {e}")
+            logger.error(f"記事読み込みエラー: {e}")
             return []
     
     def save_articles(self, articles: List[FeedItem]):
@@ -138,13 +141,13 @@ class DataStorage:
             with open(self.articles_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
                 
-            print(f"記事データ保存完了: {len(data)}件")
+            logger.debug(f"記事データ保存完了: {len(data)}件")
         except Exception as e:
-            print(f"記事保存エラー: {e}")
+            logger.error(f"記事保存エラー: {e}")
             # バックアップから復元を試行
             backup_file = self.articles_file.with_suffix('.json.bak')
             if backup_file.exists():
-                print("バックアップから復元を試行中...")
+                logger.warning("バックアップから復元を試行中...")
                 import shutil
                 shutil.copy2(backup_file, self.articles_file)
     
@@ -176,7 +179,7 @@ class DataStorage:
         removed_count = len(articles) - len(filtered_articles)
         if removed_count > 0:
             self.save_articles(filtered_articles)
-            print(f"{removed_count}件の古い記事を削除しました")
+            logger.info(f"{removed_count}件の古い記事を削除しました")
         
         return removed_count
     
@@ -211,6 +214,6 @@ class DataStorage:
         removed_count = len(articles) - len(filtered_articles)
         if removed_count > 0:
             self.save_articles(filtered_articles)
-            print(f"{removed_count}件の古い読み取り記録を削除しました")
+            logger.info(f"{removed_count}件の古い読み取り記録を削除しました")
         
         return removed_count

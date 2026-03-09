@@ -1,6 +1,5 @@
 import requests
-from typing import Optional
-from ai_base import AIServiceBase, AIConfig
+from ai_base import AIServiceBase, AIConfig, AIServiceError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -58,11 +57,14 @@ class OllamaService(AIServiceBase):
             else:
                 raise ValueError(f"予期しないレスポンス形式: {result}")
                 
-        except requests.exceptions.ConnectionError:
-            raise Exception(f"{self.name}: Ollamaサーバーに接続できません")
+        except AIServiceError:
+            raise
         except Exception as e:
             logger.error(f"{self.name}でエラーが発生: {str(e)}")
-            raise
+            raise AIServiceError(
+                f"{self.name}: {str(e)}",
+                service_name=self.name,
+                error_category=AIServiceError.UNKNOWN)
     
     def is_available(self) -> bool:
         """Ollamaサーバーが利用可能かチェック"""

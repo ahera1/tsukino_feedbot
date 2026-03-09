@@ -4,7 +4,10 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from models import FeedItem, FeedSource
 import hashlib
+import logging
 from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH, FEED_INITIAL_DELAY_MINUTES, FEED_FETCH_TIMEOUT
+
+logger = logging.getLogger(__name__)
 
 
 class FeedReader:
@@ -55,13 +58,13 @@ class FeedReader:
             feed = feedparser.parse(response.content)
             
             if feed.bozo:
-                print(f"フィード解析警告 ({feed_source.name}): {feed.bozo_exception}")
+                logger.warning(f"フィード解析警告 ({feed_source.name}): {feed.bozo_exception}")
             
             items = []
             for entry in feed.entries:
                 # 完全性チェック
                 if not self._is_article_complete(entry):
-                    print(f"不完全な記事をスキップ: {getattr(entry, 'link', 'URL不明')}")
+                    logger.debug(f"不完全な記事をスキップ: {getattr(entry, 'link', 'URL不明')}")
                     continue
                 
                 # 公開日時の取得
@@ -69,7 +72,7 @@ class FeedReader:
                 
                 # 新しすぎる記事の遅延処理チェック
                 if self._is_article_too_new(published):
-                    print(f"新しすぎる記事を遅延: {getattr(entry, 'title', 'タイトル不明')} (公開: {published})")
+                    logger.debug(f"新しすぎる記事を遅延: {getattr(entry, 'title', 'タイトル不明')} (公開: {published})")
                     continue
                 
                 # 記事の一意IDを生成（URLベース）
@@ -88,11 +91,11 @@ class FeedReader:
                 )
                 items.append(feed_item)
             
-            print(f"{feed_source.name}: {len(items)}件の記事を取得")
+            logger.debug(f"{feed_source.name}: {len(items)}件の記事を取得")
             return items
             
         except Exception as e:
-            print(f"フィード取得エラー ({feed_source.name}): {e}")
+            logger.error(f"フィード取得エラー ({feed_source.name}): {e}")
             return []
     
     def _parse_published_date(self, entry) -> datetime:

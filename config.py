@@ -3,6 +3,9 @@
 
 import os
 import json
+import logging
+
+_config_logger = logging.getLogger(__name__)
 
 # フィード設定をJSONファイルから読み込み
 def load_feed_urls():
@@ -11,11 +14,10 @@ def load_feed_urls():
         with open('feeds.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
-        print("警告: フィード設定ファイル feeds.json が見つかりません。")
-        print("feeds.example.json を feeds.json にコピーして使用してください。")
+        _config_logger.warning("フィード設定ファイル feeds.json が見つかりません。feeds.example.json をコピーして使用してください。")
         return []
     except json.JSONDecodeError as e:
-        print(f"エラー: feeds.json の形式が正しくありません: {e}")
+        _config_logger.error(f"feeds.json の形式が正しくありません: {e}")
         return []
 
 FEED_URLS = load_feed_urls()
@@ -136,5 +138,7 @@ FEED_INITIAL_DELAY_MINUTES = int(os.getenv("FEED_INITIAL_DELAY_MINUTES", "5"))  
 FEED_FETCH_TIMEOUT = int(os.getenv("FEED_FETCH_TIMEOUT", "30"))  # フィード取得のHTTPタイムアウト（秒）
 
 # ログ設定
-LOG_LEVEL = os.getenv("LOG_LEVEL")
-LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
+LOG_FILE_LEVEL = os.getenv("LOG_FILE_LEVEL", "DEBUG")
+LOG_FILE_RETENTION_DAYS = int(os.getenv("LOG_FILE_RETENTION_DAYS", "14"))
