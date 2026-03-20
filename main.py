@@ -12,6 +12,13 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from pathlib import Path
 
+# .envファイルの読み込み（Docker外での実行時に必要）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # 設定の読み込みを試行
 try:
     import config

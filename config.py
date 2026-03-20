@@ -43,22 +43,37 @@ def get_optional_float(env_var: str, default: str = None) -> float:
         return None
 
 # AI統合プロンプト設定
+def _decode_env_escapes(value: str) -> str:
+    """環境変数値のエスケープシーケンス（\\n等）を実際の文字に変換"""
+    return value.replace("\\n", "\n").replace("\\t", "\t")
+
 # システムプロンプト（AI全体で統一使用）
-AI_SYSTEM_PROMPT_TEMPLATE = os.getenv(
-    "AI_SYSTEM_PROMPT_TEMPLATE",
-    "あなたは技術ニュースを要約する専門家です。以下のルールに従って要約を作成してください：\n"
-    "- 140文字以内で簡潔にまとめる\n"
-    "- 重要な技術的ポイントを優先する\n"
-    "- 専門用語は適切に使用する\n"
-    "- 客観的で事実ベースの内容にする\n"
-    "- 絵文字は使用しない"
-).replace("\\n", "\n")
+_raw_system_prompt = os.getenv("AI_SYSTEM_PROMPT_TEMPLATE", "")
+AI_SYSTEM_PROMPT_TEMPLATE = _decode_env_escapes(
+    os.getenv(
+        "AI_SYSTEM_PROMPT_TEMPLATE",
+        "あなたは技術ニュースを要約する専門家です。以下のルールに従って要約を作成してください：\n"
+        "- 140文字以内で簡潔にまとめる\n"
+        "- 重要な技術的ポイントを優先する\n"
+        "- 専門用語は適切に使用する\n"
+        "- 客観的で事実ベースの内容にする\n"
+        "- 絵文字は使用しない"
+    )
+)
 
 # ユーザープロンプトテンプレート（記事本文と最小限の指示）
-AI_USER_PROMPT_TEMPLATE = os.getenv(
-    "AI_USER_PROMPT_TEMPLATE", 
-    "以下の記事を要約してください：\n\nタイトル: {title}\n内容: {content}"
-).replace("\\n", "\n")
+_raw_user_prompt = os.getenv("AI_USER_PROMPT_TEMPLATE", "")
+AI_USER_PROMPT_TEMPLATE = _decode_env_escapes(
+    os.getenv(
+        "AI_USER_PROMPT_TEMPLATE",
+        "以下の記事を要約してください：\n\nタイトル: {title}\n内容: {content}"
+    )
+)
+
+_config_logger.debug(f"システムプロンプト (raw): {repr(_raw_system_prompt)[:300]}")
+_config_logger.debug(f"システムプロンプト (processed): {repr(AI_SYSTEM_PROMPT_TEMPLATE)[:300]}")
+_config_logger.debug(f"ユーザープロンプト (raw): {repr(_raw_user_prompt)[:300]}")
+_config_logger.debug(f"ユーザープロンプト (processed): {repr(AI_USER_PROMPT_TEMPLATE)[:300]}")
 
 # 後方互換性のため SUMMARY_PROMPT も維持
 SUMMARY_PROMPT = AI_USER_PROMPT_TEMPLATE
