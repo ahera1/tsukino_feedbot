@@ -56,6 +56,7 @@ class FeedReader:
         try:
             headers = {
                 'User-Agent': FEED_USER_AGENT,
+                'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
             }
             response = requests.get(feed_source.url, timeout=FEED_FETCH_TIMEOUT, headers=headers)
             feed = feedparser.parse(response.content)
