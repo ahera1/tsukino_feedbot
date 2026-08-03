@@ -59,6 +59,16 @@ class FeedReader:
                 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
             }
             response = requests.get(feed_source.url, timeout=FEED_FETCH_TIMEOUT, headers=headers)
+            
+            if response.status_code != 200:
+                logger.error(f"フィード取得失敗 ({feed_source.name}): HTTP {response.status_code}")
+                return []
+            
+            content_type = response.headers.get('Content-Type', '')
+            if 'html' in content_type and 'xml' not in content_type:
+                logger.error(f"フィード取得失敗 ({feed_source.name}): RSS/XMLではなくHTMLが返されました (Content-Type: {content_type})。WAFやアクセス制限の可能性があります")
+                return []
+            
             feed = feedparser.parse(response.content)
             
             if feed.bozo:
