@@ -71,6 +71,7 @@ docker-compose logs -f
 
 - フィード取得間隔
 - フィード取得タイムアウト（`FEED_FETCH_TIMEOUT`: サーバー無応答時にスキップするまでの秒数、デフォルト: 30秒）
+- フィード取得User-Agent（`FEED_USER_AGENT`: WAF等による遮断を軽減するためのUser-Agent設定）
 - 記事の保持期間
 - AI要約プロンプト
 - Mastodon投稿設定

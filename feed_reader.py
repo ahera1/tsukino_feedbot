@@ -5,7 +5,7 @@ from typing import List
 from models import FeedItem, FeedSource
 import hashlib
 import logging
-from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH, FEED_INITIAL_DELAY_MINUTES, FEED_FETCH_TIMEOUT
+from config import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH, FEED_INITIAL_DELAY_MINUTES, FEED_FETCH_TIMEOUT, FEED_USER_AGENT
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,10 @@ class FeedReader:
     def fetch_feed_items(self, feed_source: FeedSource) -> List[FeedItem]:
         """指定されたフィードから記事を取得"""
         try:
-            response = requests.get(feed_source.url, timeout=FEED_FETCH_TIMEOUT)
+            headers = {
+                'User-Agent': FEED_USER_AGENT,
+            }
+            response = requests.get(feed_source.url, timeout=FEED_FETCH_TIMEOUT, headers=headers)
             feed = feedparser.parse(response.content)
             
             if feed.bozo:

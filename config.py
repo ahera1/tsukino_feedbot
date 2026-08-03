@@ -152,6 +152,9 @@ FEED_INITIAL_DELAY_MINUTES = int(os.getenv("FEED_INITIAL_DELAY_MINUTES", "5"))  
 # フィード取得タイムアウト設定
 FEED_FETCH_TIMEOUT = int(os.getenv("FEED_FETCH_TIMEOUT", "30"))  # フィード取得のHTTPタイムアウト（秒）
 
+# フィード取得User-Agent設定
+FEED_USER_AGENT = os.getenv("FEED_USER_AGENT", "TsukinoFeedBot/1.0 (+https://github.com/feedbot)")
+
 # ログ設定
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
