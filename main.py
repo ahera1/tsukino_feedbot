@@ -4,12 +4,10 @@ Tsukino Feedbot - AIを活用したフィード要約・Mastodon投稿ボット
 """
 
 import os
-import sys
 import time
 import signal
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List
 from pathlib import Path
 
 # .envファイルの読み込み（Docker外での実行時に必要）
@@ -100,7 +98,10 @@ class FeedBot:
         self.logger = logging.getLogger(__name__)
         self.storage = DataStorage()
         self.feed_reader = FeedReader()
-        self.ai_service = create_ai_service_manager(config.AI_CONFIGS)
+        self.ai_service = create_ai_service_manager(
+            config.AI_CONFIG_FILE,
+            config.AI_SYSTEM_PROMPT_TEMPLATE,
+        )
         self.mastodon_service = MastodonService(
             config.MASTODON_INSTANCE_URL,
             config.MASTODON_ACCESS_TOKEN
@@ -451,8 +452,7 @@ def main():
     
     # 環境変数チェック
     required_env_vars = [
-        'OPENROUTER_API_KEY',
-        'MASTODON_INSTANCE_URL', 
+        'MASTODON_INSTANCE_URL',
         'MASTODON_ACCESS_TOKEN',
         'CHECK_INTERVAL_MINUTES',
         'ARTICLE_RETENTION_DAYS',

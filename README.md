@@ -10,11 +10,13 @@ AIを活用したフィード要約・Mastodon投稿ボット
 ```bash
 copy .env.example .env
 copy feeds.example.json feeds.json
+copy ai_config.example.json data\ai_config.json
 ```
 
 2. 環境変数の設定:
 `.env` ファイルを編集してAPIキー等を設定
-- `OPENROUTER_API_KEY`: OpenRouter APIキー
+- `AI_CONFIG_FILE`: AIフォールバック設定ファイル（デフォルト: `data/ai_config.json`）
+- `OPENROUTER_API_KEY`, `OPENAI_API_KEY`: AI設定から参照するAPIキー
 - `MASTODON_INSTANCE_URL`: MastodonインスタンスURL
 - `MASTODON_ACCESS_TOKEN`: Mastodonアクセストークン
 - `POST_VISIBILITY`: Mastodon投稿の公開範囲（public/unlisted/private/direct）
@@ -55,7 +57,8 @@ docker-compose logs -f
 ## 機能
 
 - RSSフィードの定期監視
-- AI要約生成（OpenRouter API）
+- AI要約生成（OpenAI互換Chat Completions／Responses API）
+- プロバイダとモデルをまたいだ設定順フォールバック
 - Mastodonへの自動投稿
 - 既読記事管理
 
@@ -72,8 +75,61 @@ docker-compose logs -f
 - `.env`: 環境変数（APIキー、認証情報など）
 - `config.py`: メイン設定ファイル（汎用的な設定読み込み処理、Git管理対象）
 - `feeds.json`: フィード設定専用ファイル（監視するRSSフィードの一覧、JSON形式）
-- 個人設定ファイル（`.env` と `feeds.json`）には `.example` 版があり、これをコピーして使用します
-- `.env` と `feeds.json` は個人設定のため .gitignore で管理対象外になっています
+- `data/ai_config.json`: AIプロバイダ、モデル、API形式、フォールバック順
+- 個人設定ファイルには `.example` 版があり、これをコピーして使用します
+- `.env`, `feeds.json`, `data/` は個人設定または実行データのため .gitignore で管理対象外になっています
+
+## AIフォールバック設定
+
+data/ai_config.json の providers に接続先を定義し、fallbacks へ試行順に候補を列挙します。同じプロバイダの異なるモデルを複数回指定することもできます。モデル、接続先、API形式、生成パラメータ、リトライ設定はこのファイルだけで管理し、`.env` にはAPIキーなどの秘密情報だけを設定します。AI設定ファイルが存在しない場合、アプリケーションは起動時にエラーになります。
+
+~~~json
+{
+  "providers": {
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "auth": {
+        "type": "bearer",
+        "api_key_env": "OPENAI_API_KEY"
+      }
+    },
+    "ollama": {
+      "base_url": "http://host.docker.internal:11434/v1",
+      "auth": {"type": "none"}
+    }
+  },
+  "fallbacks": [
+    {
+      "id": "openai-primary",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "api": "responses",
+      "parameters": {
+        "max_output_tokens": 8000,
+        "store": false
+      }
+    },
+    {
+      "id": "ollama-local",
+      "provider": "ollama",
+      "model": "qwen3.5:2b",
+      "api": "responses",
+      "parameters": {
+        "max_output_tokens": 8000,
+        "temperature": 0.3
+      }
+    }
+  ]
+}
+~~~
+
+- api: responses または chat_completions
+- base_url: /v1 までを指定。API形式に応じたパスは自動追加
+- parameters: 各API・モデルへ渡す追加パラメータ
+- retry: 全体または候補ごとの timeout、max_attempts、base_delay
+- auth.type: bearer、header、none
+
+対象はOpenAI互換形式を提供するプロバイダです。OllamaのResponses APIは0.13.3以降が必要です。Dockerからホスト上のOllamaへ接続する例では host.docker.internal を使用しています。ローカルで直接実行する場合は localhost へ変更してください。
 
 ## 設定可能項目
 
@@ -82,6 +138,7 @@ docker-compose logs -f
 - フィード取得User-Agent（`FEED_USER_AGENT`: WAF等による遮断を軽減するためのUser-Agent設定）
 - 記事の保持期間
 - AI要約プロンプト
+- AIプロバイダ、モデル、API形式、フォールバック順
 - Mastodon投稿設定
   - **公開範囲**: 投稿の公開レベル（public: 公開, unlisted: 未収載, private: フォロワーのみ, direct: ダイレクト）
 - **時間帯制限**: 投稿を行わない時間帯の設定（生活時間帯を考慮）

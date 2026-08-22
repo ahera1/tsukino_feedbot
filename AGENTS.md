@@ -19,9 +19,10 @@ Python 3.11アプリケーションです。
 - `models.py`: フィードと記事のdataclass
 - `storage.py`: JSONデータの永続化とクリーンアップ
 - `feed_reader.py`: RSSフィードの取得と解析
-- `ai_manager.py`: AIサービスの選択とフォールバック
-- `ai_base.py`: AIサービス共通処理
-- `ai_openrouter.py`, `ai_openai.py`, `ai_ollama.py`: 各AIサービス連携
+- `ai_manager.py`: AI候補の選択とフォールバック
+- `ai_base.py`: AI API共通の設定、通信、リトライ、エラー処理
+- `ai_settings.py`: AIプロバイダとフォールバック設定の読み込み
+- `ai_chat_completions.py`, `ai_responses.py`: OpenAI互換API形式ごとの実装
 - `ai_service.py`: 旧インターフェースとの互換レイヤー
 - `mastodon_service.py`: Mastodon API連携
 - `config.py`: 環境変数の読み込みとアプリケーション設定

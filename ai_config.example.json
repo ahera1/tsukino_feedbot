@@ -1,0 +1,68 @@
+{
+  "providers": {
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "auth": {
+        "type": "bearer",
+        "api_key_env": "OPENROUTER_API_KEY"
+      },
+      "headers": {
+        "HTTP-Referer": "https://github.com/ahera1/tsukino_feedbot",
+        "X-Title": "Tsukino Feedbot"
+      }
+    },
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "auth": {
+        "type": "bearer",
+        "api_key_env": "OPENAI_API_KEY"
+      }
+    },
+    "ollama": {
+      "base_url": "http://host.docker.internal:11434/v1",
+      "auth": {
+        "type": "none"
+      }
+    }
+  },
+  "fallbacks": [
+    {
+      "id": "openrouter-primary",
+      "provider": "openrouter",
+      "model": "openai/gpt-oss-20b",
+      "api": "responses",
+      "parameters": {
+        "max_output_tokens": 64000,
+        "temperature": 0.3
+      }
+    },
+    {
+      "id": "openai-secondary",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "api": "responses",
+      "parameters": {
+        "max_output_tokens": 64000,
+        "store": false
+      }
+    },
+    {
+      "id": "ollama-local",
+      "provider": "ollama",
+      "model": "qwen3.5:2b",
+      "api": "responses",
+      "parameters": {
+        "max_output_tokens": 64000,
+        "temperature": 0.3
+      },
+      "retry": {
+        "timeout": 180
+      }
+    }
+  ],
+  "retry": {
+    "timeout": 120,
+    "max_attempts": 3,
+    "base_delay": 10
+  }
+}

@@ -22,26 +22,6 @@ def load_feed_urls():
 
 FEED_URLS = load_feed_urls()
 
-def get_optional_int(env_var: str, default: str = None) -> int:
-    """環境変数から整数を取得。空文字の場合はNoneを返す"""
-    value = os.getenv(env_var, default or "")
-    if not value or value.strip() == "":
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-def get_optional_float(env_var: str, default: str = None) -> float:
-    """環境変数から浮動小数点数を取得。空文字の場合はNoneを返す"""
-    value = os.getenv(env_var, default or "")
-    if not value or value.strip() == "":
-        return None
-    try:
-        return float(value)
-    except ValueError:
-        return None
-
 # AI統合プロンプト設定
 def _decode_env_escapes(value: str) -> str:
     """環境変数値のエスケープシーケンス（\\n等）を実際の文字に変換"""
@@ -75,51 +55,8 @@ _config_logger.debug(f"システムプロンプト (processed): {repr(AI_SYSTEM_
 _config_logger.debug(f"ユーザープロンプト (raw): {repr(_raw_user_prompt)[:300]}")
 _config_logger.debug(f"ユーザープロンプト (processed): {repr(AI_USER_PROMPT_TEMPLATE)[:300]}")
 
-# 後方互換性のため SUMMARY_PROMPT も維持
-SUMMARY_PROMPT = AI_USER_PROMPT_TEMPLATE
-
-# AI API設定（優先順位順）
-AI_CONFIGS = [
-    {
-        "name": "OpenRouter",
-        "api_key": None,  # .envファイルで設定
-        "model": os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
-        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
-        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
-        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
-        "extra_params": {
-            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
-        }
-    },
-    {
-        "name": "OpenAI",
-        "api_key": None,  # .envファイルで設定
-        "model": os.getenv("OPENAI_MODEL", "gpt-5-nano"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
-        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "120")),  # 処理時間も延長
-        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
-        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
-        "extra_params": {
-            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
-        }
-    },
-    {
-        "name": "Ollama",
-        "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api/chat"),
-        "model": os.getenv("OLLAMA_MODEL", "llama2"),
-        "max_tokens": get_optional_int("AI_MAX_TOKENS", "8000"),  # モデル仕様に合わせて大幅増加
-        "temperature": get_optional_float("AI_TEMPERATURE", "0.3"),
-        "timeout": int(os.getenv("AI_TIMEOUT", "180")),  # Ollamaはさらに長めに調整
-        "max_retries": int(os.getenv("AI_MAX_RETRIES", "3")),
-        "retry_delay": int(os.getenv("AI_RETRY_DELAY", "10")),
-        "extra_params": {
-            "system_prompt": AI_SYSTEM_PROMPT_TEMPLATE  # 統合システムプロンプト使用
-        }
-    }
-]
+# AIプロバイダ、モデル、API形式、フォールバック順を定義する設定ファイル
+AI_CONFIG_FILE = os.getenv("AI_CONFIG_FILE", "data/ai_config.json")
 
 # Mastodon設定
 MASTODON_INSTANCE_URL = os.getenv("MASTODON_INSTANCE_URL")

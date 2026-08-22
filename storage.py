@@ -1,8 +1,7 @@
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from models import FeedItem, FeedSource
 import logging
 

@@ -5,7 +5,7 @@
 ```mermaid
 flowchart TD
     Start([起動]) --> Init[初期化処理]
-    Init --> LoadConfig[設定読み込み]
+    Init --> LoadConfig[環境変数・フィード・<br/>AIフォールバック設定読み込み]
     LoadConfig --> SetupSignal[シグナルハンドラ設定<br/>SIGTERM/SIGINT]
     SetupSignal --> VerifyMastodon[Mastodon認証確認]
     
@@ -36,7 +36,7 @@ flowchart TD
     
     ProcessAI --> AIFallback{AIフォールバック}
     AIFallback -->|成功| PostMastodon[Mastodon投稿]
-    AIFallback -->|エラー<br/>429/403/404/timeout等| TryNext[次のAIサービスでリトライ]
+    AIFallback -->|エラー<br/>429/403/404/timeout等| TryNext[次のAI候補でリトライ]
     TryNext --> AIFallback
     AIFallback -->|全サービス失敗| LogFailure[エラーログ出力<br/>フォールバック経緯記録]
     LogFailure --> SaveSecond
@@ -196,3 +196,12 @@ flowchart TD
 - **位置**: ループ制御下（_process_single_article の外）
 - **分割チェック**: 1秒ごとに中断要求を確認
 - **最終記事**: 待機をスキップ
+
+### 6. AI APIとフォールバック
+- **API実装**: OpenAI互換のChat CompletionsとResponsesの2形式
+- **接続先**: プロバイダ名、ベースURL、認証方式を設定で定義
+- **候補**: プロバイダ、モデル、API形式を組み合わせて優先順位順に列挙
+- **リトライ**: 一時的なHTTPエラーは同じ候補で指数バックオフ後に再試行
+- **フォールバック**: 候補内の試行失敗後、次の候補へ切り替え
+- **Responses**: 単発要約として `instructions` と `input` を送り、型付き `output` からテキストを抽出
+- **設定必須**: `AI_CONFIG_FILE` が指すJSON設定がない場合は起動時にエラー
