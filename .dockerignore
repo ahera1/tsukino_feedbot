@@ -37,6 +37,8 @@ docker-compose.*.yml
 
 # ドキュメント
 README.md
+FLOWCHART.md
+AGENTS.md
 docs/
 
 # 開発用ファイル
